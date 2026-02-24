@@ -1,0 +1,25 @@
+---
+import sql from '../lib/db.js';
+
+let usuarios = null;
+let error = null;
+
+try {
+  const result = await sql`SELECT * FROM usuarios`;
+  usuarios = result;
+} catch (e) {
+  error = JSON.stringify(e, Object.getOwnPropertyNames(e));
+}
+---
+
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <h1>Test conexión</h1>
+
+    {error !== null && <pre style="color:red; white-space:pre-wrap">{error}</pre>}
+    {usuarios !== null && <p style="color:green">OK: {usuarios.length} filas</p>}
+  </body>
+</html>
