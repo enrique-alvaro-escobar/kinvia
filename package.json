@@ -12,6 +12,9 @@
     "@astrojs/node": "^9.5.4",
     "@tailwindcss/vite": "^4.2.1",
     "astro": "^5.17.1",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.19.0",
     "postgres": "^3.4.8",
     "tailwindcss": "^4.2.1"
   }
