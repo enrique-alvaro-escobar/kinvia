@@ -177,7 +177,7 @@
       : `<svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Iniciar sesión`;
   }
 
-  function handleLogin() {
+  async function handleLogin() {
     const emailEl = document.getElementById('email') as HTMLInputElement;
     const email   = emailEl.value.trim();
     const pass    = pwdInput.value;
@@ -198,9 +198,33 @@
     // ──────────────────────────────────────────────────────────
 
     setTimeout(() => {
-      setLoading(false);
-      showError('Email o contraseña incorrectos. Inténtalo de nuevo.');
-    }, 1800);
+  setLoading(false);
+  showError('Email o contraseña incorrectos. Inténtalo de nuevo.');
+}, 1800);
+
+try {
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password: pass })
+  })
+
+  const data = await res.json()
+
+  if (!res.ok) {
+    setLoading(false)
+    showError(data.error)
+    return
+  }
+
+  localStorage.setItem('token', data.token)
+  window.location.href = '/dashboard'
+
+} catch (e) {
+  setLoading(false)
+  showError('Error de conexión. Inténtalo de nuevo.')
+}
+
   }
 
   loginBtn.addEventListener('click', handleLogin);
