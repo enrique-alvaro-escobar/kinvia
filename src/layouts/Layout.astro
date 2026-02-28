@@ -1,23 +1,61 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
-</html>
+---
+export interface Props {
+  title?: string;
+}
+const { title = "Kinvia" } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style is:global>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        /* Paleta principal — mismos valores que el login */
+        --blue:        #6C9BB5;
+        --blue-dark:   #5a88a2;
+        --blue-darker: #4a7590;
+        --blue-light:  #9dbed1;
+        --blue-bg:     #eef4f8;
+        --blue-bg-soft:#f4f8fb;
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>
+        --text-primary:   #1a1a2e;
+        --text-secondary: #6b6b8a;
+        --text-muted:     #a0a0bb;
+
+        --bg:     #faf8ff;
+        --white:  #ffffff;
+        --border: #e8e0f5;
+
+        --radius: 14px;
+        --shadow: 0 2px 16px rgba(108, 155, 181, 0.10);
+        --shadow-md: 0 4px 24px rgba(108, 155, 181, 0.16);
+      }
+      html, body {
+        height: 100%;
+        font-family: 'Nunito', sans-serif;
+        background: var(--bg);
+        color: var(--text-primary);
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      main {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 80px;
+      }
+    </style>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
