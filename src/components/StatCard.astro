@@ -1,0 +1,67 @@
+---
+export interface Props {
+  icon: string;
+  count: number;
+  label: string;
+}
+const { icon, count, label } = Astro.props;
+---
+
+<div class="stat-card">
+  <div class="stat-icon" set:html={icon} />
+  <div class="stat-count">{count}</div>
+  <div class="stat-label">{label}</div>
+</div>
+
+<style>
+  .stat-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 18px 10px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+    backdrop-filter: blur(6px);
+  }
+  .stat-card:hover {
+    background: rgba(255, 255, 255, 0.28);
+    transform: translateY(-2px);
+  }
+  .stat-icon {
+    color: rgba(255,255,255,0.92);
+    height: 22px;
+    display: flex;
+    align-items: center;
+  }
+  .stat-icon :global(svg) {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .stat-count {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.80);
+    text-align: center;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+</style>

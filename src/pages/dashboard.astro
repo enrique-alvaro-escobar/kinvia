@@ -1,1 +1,400 @@
-<h1>Funciona correctamente</h1>
+---
+import Layout from "../layouts/Layout.astro";
+import StatCard from "../components/StatCard.astro";
+import TaskItem from "../components/TaskItem.astro";
+import EventItem from "../components/EventItem.astro";
+import BottomNav from "../components/BottomNav.astro";
+
+// ── En producción, reemplaza esto por llamadas a tus API routes ──
+// const tasksRes = await fetch(new URL('/api/tareas', Astro.url));
+// const tasks = await tasksRes.json();
+// ────────────────────────────────────────────────────────────────
+
+const user = {
+  name: "María",
+  careRecipient: "Abuela Rosa",
+};
+
+const stats = {
+  tareasPendientes: 2,
+  proximosEventos: 1,
+  notasCompartidas: 4,
+};
+
+const tasks = [
+  {
+    title: "Comprar medicamentos",
+    description: "Recoger recetas en la farmacia",
+    date: "24 de febrero",
+    status: "en_curso" as const,
+  },
+  {
+    title: "Cita con el médico",
+    description: "Revisión mensual con el Dr. Rodríguez a las 10:00",
+    date: "25 de febrero",
+    status: "pendiente" as const,
+  },
+  {
+    title: "Ejercicios de fisioterapia",
+    description: "Rutina de ejercicios de movilidad de 30 minutos",
+    date: "26 de febrero",
+    status: "pendiente" as const,
+  },
+];
+
+const events = [
+  {
+    title: "Medicación especial",
+    description: "Inyección vitamina B12",
+    datetime: "28 de febrero · 12:00",
+    tag: "Medicación",
+  },
+];
+
+const familyMembers = [
+  { initial: "M", bg: "#6C9BB5" },
+  { initial: "J", bg: "#5a88a2" },
+  { initial: "A", bg: "#9dbed1" },
+  { initial: "C", bg: "#4a7590" },
+];
+
+const iconTask = `<svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
+const iconCal  = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+---
+
+<Layout title="Kinvia · Inicio">
+  <main>
+
+    <!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
+    <header class="dash-header">
+      <!-- Pompas decorativas igual que en LoginPanel -->
+      <div class="bubble b1"></div>
+      <div class="bubble b2"></div>
+      <div class="bubble b3"></div>
+
+      <div class="header-top">
+        <div class="header-left">
+          <!-- Logo: mismo que el login -->
+          <div class="header-logo">
+            <img
+              src="/kinvia-logo-letter-white.webp"
+              alt="Kinvia"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+            />
+            <div class="logo-fallback">
+              <svg viewBox="0 0 32 32" fill="none">
+                <path d="M10 24 L16 8 L22 24" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12.5 19 H19.5" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="header-text">
+            <h1 class="greeting">¡Hola, {user.name}!</h1>
+            <p class="subgreeting">Cuidando de {user.careRecipient}</p>
+          </div>
+        </div>
+
+        <button class="notif-btn" aria-label="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <!-- Punto rojo de notificación -->
+          <span class="notif-dot"></span>
+        </button>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stat-row">
+        <StatCard icon={iconTask} count={stats.tareasPendientes} label="Tareas pendientes" />
+        <StatCard icon={iconCal}  count={stats.proximosEventos}  label="Próximos eventos" />
+        <StatCard icon={iconNote} count={stats.notasCompartidas} label="Notas compartidas" />
+      </div>
+    </header>
+
+    <!-- ═══════════════════════════════ CONTENT ══════════════════════════════ -->
+    <div class="content">
+
+      <!-- PRÓXIMAS TAREAS -->
+      <section class="card" style="animation-delay: 0.05s">
+        <div class="card-header">
+          <div class="card-titles">
+            <h2 class="card-title">Próximas tareas</h2>
+            <p class="card-sub">Tareas asignadas para los próximos días</p>
+          </div>
+          <a href="/tareas" class="card-arrow" aria-label="Ver tareas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </a>
+        </div>
+        <div class="card-body">
+          {tasks.map(t => (
+            <TaskItem title={t.title} description={t.description} date={t.date} status={t.status} />
+          ))}
+        </div>
+      </section>
+
+      <!-- PRÓXIMOS EVENTOS -->
+      <section class="card" style="animation-delay: 0.10s">
+        <div class="card-header">
+          <div class="card-titles">
+            <h2 class="card-title">Próximos eventos</h2>
+            <p class="card-sub">Citas y eventos en el calendario</p>
+          </div>
+          <a href="/calendario" class="card-arrow" aria-label="Ver calendario">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </a>
+        </div>
+        <div class="card-body">
+          {events.map(e => (
+            <EventItem title={e.title} description={e.description} datetime={e.datetime} tag={e.tag} />
+          ))}
+        </div>
+      </section>
+
+      <!-- GRUPO FAMILIAR -->
+      <section class="card" style="animation-delay: 0.15s">
+        <div class="card-header">
+          <div class="card-titles">
+            <h2 class="card-title">Grupo familiar</h2>
+            <p class="card-sub">Familia González</p>
+          </div>
+          <a href="/grupo" class="card-arrow" aria-label="Ver grupo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </a>
+        </div>
+        <div class="card-body">
+          <div class="family-row">
+            <svg class="family-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span class="family-count">{familyMembers.length} miembros activos</span>
+          </div>
+          <div class="avatars">
+            {familyMembers.map(m => (
+              <div class="avatar" style={`background:${m.bg}`}>{m.initial}</div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <BottomNav active="inicio" />
+</Layout>
+
+<style>
+  /* ── HEADER ── */
+  .dash-header {
+    position: relative;
+    background: #6C9BB5;
+    padding: 22px 20px 26px;
+    overflow: hidden;
+  }
+
+  /* Mismas pompas que LoginPanel */
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .b1 { width: 320px; height: 320px; background: rgba(255,255,255,0.06); top: -100px; right: -80px; }
+  .b2 { width: 220px; height: 220px; background: rgba(255,255,255,0.05); bottom: -60px; left: -50px; }
+  .b3 { width: 140px; height: 140px; background: rgba(255,255,255,0.04); top: 50%; left: 30%; transform: translate(-50%,-50%); }
+
+  .header-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-logo {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+  .header-logo img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+  .logo-fallback {
+    display: none;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+  .logo-fallback svg { width: 24px; height: 24px; }
+
+  .header-text {}
+  .greeting {
+    font-size: 1.18rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .subgreeting {
+    font-size: 0.76rem;
+    color: rgba(255,255,255,0.72);
+    font-weight: 600;
+    margin-top: 1px;
+  }
+
+  .notif-btn {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .notif-btn:hover { background: rgba(255,255,255,0.25); }
+  .notif-btn svg { width: 18px; height: 18px; }
+
+  .notif-dot {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 8px;
+    height: 8px;
+    background: #ff5e7d;
+    border-radius: 50%;
+    border: 2px solid #6C9BB5;
+  }
+
+  .stat-row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 10px;
+  }
+
+  /* ── CONTENT ── */
+  .content {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    /* Entrada suave al cargar */
+    animation: fadeUp 0.35s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 18px 0;
+  }
+  .card-title {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .card-sub {
+    font-size: 0.73rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .card-arrow {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    border-radius: 8px;
+    transition: color 0.2s, background 0.2s;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .card-arrow:hover { color: var(--blue); background: var(--blue-bg); }
+  .card-arrow svg { width: 16px; height: 16px; }
+
+  .card-body { padding: 6px 18px 14px; }
+
+  /* ── FAMILIA ── */
+  .family-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+  }
+  .family-icon {
+    width: 17px;
+    height: 17px;
+    color: var(--blue);
+    flex-shrink: 0;
+  }
+  .family-count {
+    font-size: 0.80rem;
+    font-weight: 700;
+  }
+  .avatars {
+    display: flex;
+    gap: 8px;
+  }
+  .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 900;
+    color: white;
+    border: 2px solid var(--white);
+    box-shadow: 0 2px 8px rgba(108,155,181,0.25);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .avatar:hover {
+    transform: scale(1.12) translateY(-2px);
+    box-shadow: 0 4px 14px rgba(108,155,181,0.35);
+  }
+</style>
