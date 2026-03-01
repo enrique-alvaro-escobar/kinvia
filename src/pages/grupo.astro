@@ -1,28 +1,83 @@
 ---
-// src/pages/grupo.astro
 import BottomNav from "../components/BottomNav.astro";
 import '../styles/global.css';
+import { query } from "../lib/db.js";
 
-// En producción reemplaza con fetch a tus API routes
-const grupo = {
-  nombre: "Familia González",
-  cuidado: "Abuela Rosa",
-  codigo: "FAMILIA-GONZALEZ-2026",
-};
+// ── Leer token de la cookie ─────────────────────────────────────
+const token = Astro.cookies.get("token")?.value;
+if (!token) return Astro.redirect("/login");
 
-const miembros = [
-  { initial: "M", bg: "#6C9BB5", nombre: "María González",  email: "maria@example.com",  rol: "Admin", eres_tu: true },
-  { initial: "J", bg: "#5a88a2", nombre: "Juan Pérez",      email: "juan@example.com",   rol: null,    eres_tu: false },
-  { initial: "A", bg: "#9dbed1", nombre: "Ana Martínez",    email: "ana@example.com",    rol: null,    eres_tu: false },
-  { initial: "C", bg: "#4a7590", nombre: "Carlos Sánchez",  email: "carlos@example.com", rol: null,    eres_tu: false },
+let grupo = { nombre: "Mi familia", cuidado: "", codigo: "" };
+let miembros = [];
+let actividad = [
+  { valor: 0, label: "Tareas completadas", color: "#6C9BB5", bg: "#eef4f8" },
+  { valor: 0, label: "Eventos este mes",   color: "#4ade80", bg: "#f0fdf4" },
+  { valor: 0, label: "Notas compartidas",  color: "#a78bfa", bg: "#f5f3ff" },
+  { valor: 0, label: "Días activos",       color: "#fb923c", bg: "#fff7ed" },
 ];
 
-const actividad = [
-  { valor: 24, label: "Tareas completadas", color: "#6C9BB5",  bg: "#eef4f8" },
-  { valor: 18, label: "Eventos este mes",   color: "#4ade80",  bg: "#f0fdf4" },
-  { valor: 12, label: "Notas compartidas",  color: "#a78bfa",  bg: "#f5f3ff" },
-  { valor: 45, label: "Días activos",       color: "#fb923c",  bg: "#fff7ed" },
-];
+try {
+  const payload = JSON.parse(Buffer.from(token, "base64").toString());
+  const grupo_id = payload.grupo_id;
+  const usuario_id = payload.id;
+
+  // Datos del grupo
+  const grupoRes = await query('SELECT * FROM grupos WHERE id = $1', [grupo_id]);
+  if (grupoRes.rows.length > 0) {
+    grupo = {
+      nombre: grupoRes.rows[0].nombre,
+      cuidado: "",
+      codigo: `KINVIA-${grupoRes.rows[0].id}-${grupoRes.rows[0].nombre.replace(/\s+/g, '').toUpperCase()}`
+    };
+  }
+
+  // Miembros del grupo
+  const miembrosRes = await query(
+    `SELECT u.id, u.nombre, u.email, ug.rol
+     FROM usuarios u
+     INNER JOIN usuarios_grupos ug ON u.id = ug.usuario_id
+     WHERE ug.grupo_id = $1
+     ORDER BY ug.rol DESC`,
+    [grupo_id]
+  );
+  const colores = ["#6C9BB5", "#5a88a2", "#9dbed1", "#4a7590"];
+  miembros = miembrosRes.rows.map((m, i) => ({
+    initial: m.nombre.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase(),
+    bg: colores[i % colores.length],
+    nombre: m.nombre,
+    email: m.email,
+    rol: m.rol === 'admin' ? 'Admin' : null,
+    eres_tu: m.id === usuario_id
+  }));
+
+  // Actividad real
+  const tareasComp = await query(
+    `SELECT COUNT(*) FROM tareas WHERE grupo_id = $1 AND estado = 'completada'`,
+    [grupo_id]
+  );
+  const eventosMes = await query(
+    `SELECT COUNT(*) FROM eventos WHERE grupo_id = $1 AND DATE_TRUNC('month', fecha_hora) = DATE_TRUNC('month', NOW())`,
+    [grupo_id]
+  );
+  const notasTotal = await query(
+    `SELECT COUNT(*) FROM notas WHERE grupo_id = $1`,
+    [grupo_id]
+  );
+  const diasActivos = await query(
+    `SELECT COUNT(DISTINCT DATE(created_at)) FROM tareas WHERE grupo_id = $1`,
+    [grupo_id]
+  );
+
+  actividad = [
+    { valor: parseInt(tareasComp.rows[0].count),  label: "Tareas completadas", color: "#6C9BB5", bg: "#eef4f8" },
+    { valor: parseInt(eventosMes.rows[0].count),  label: "Eventos este mes",   color: "#4ade80", bg: "#f0fdf4" },
+    { valor: parseInt(notasTotal.rows[0].count),  label: "Notas compartidas",  color: "#a78bfa", bg: "#f5f3ff" },
+    { valor: parseInt(diasActivos.rows[0].count), label: "Días activos",       color: "#fb923c", bg: "#fff7ed" },
+  ];
+
+} catch (e) {
+  console.error("Error en grupo.astro:", e);
+}
 ---
 
 <!DOCTYPE html>
@@ -430,9 +485,9 @@ const actividad = [
   });
 
   logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
-  });
+  document.cookie = "token=; path=/; max-age=0";
+  window.location.href = '/login';
+});
 </script>
 
 </body>
