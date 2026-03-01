@@ -1,0 +1,51 @@
+---
+// src/pages/registro.astro
+import LoginPanel    from '../components/LoginPanel.astro';
+import RegisterForm  from '../components/RegistroForm.astro';
+import '../styles/global.css';
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kinvia — Crear cuenta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Nunito', sans-serif; }
+  </style>
+</head>
+<body class="min-h-screen bg-[#faf8ff] text-[#1a1a2e]" style="font-family:'Nunito',sans-serif;">
+
+  <div class="min-h-screen grid grid-cols-1 grid-rows-[auto_1fr] lg:grid-cols-[52%_48%] lg:grid-rows-1 lg:h-screen">
+
+    <!-- Panel izquierdo — solo desktop -->
+    <LoginPanel />
+
+    <!-- Header mobile — solo visible en móvil/tablet -->
+    <div class="relative lg:hidden bg-[#6C9BB5] px-6 py-6 flex flex-col items-center gap-4 text-center order-first lg:order-none overflow-hidden">
+      <div class="absolute w-[40vw] h-[40vw] rounded-full bg-white/[.04] -top-[10vw] -right-[10vw]"></div>
+      <div class="absolute w-[30vw] h-[30vw] rounded-full bg-white/[.03] -bottom-[8vw] -left-[8vw]"></div>
+      <div class="relative z-10 flex items-center gap-1">
+        <div class="w-16 h-16 flex items-center justify-center">
+          <img src="/kinvia-logo-letter-white.webp" alt="Kinvia" class="w-full h-full object-contain"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
+          <span style="display:none; font-size:22px; font-weight:900; color:white;">Kinvia</span>
+        </div>
+      </div>
+      <p class="relative z-10 text-sm font-medium text-white/70 leading-relaxed max-w-[280px]">
+        Únete y coordina el cuidado de tu familiar con toda la familia.
+      </p>
+    </div>
+
+    <!-- Formulario de registro -->
+    <RegisterForm />
+
+  </div>
+
+</body>
+</html>
