@@ -81,10 +81,10 @@
 
     <!-- Recordarme + Olvidaste -->
     <div class="flex items-center justify-between flex-wrap gap-2 mb-7">
-      <label class="flex items-center gap-2 cursor-pointer">
+      <!-- <label class="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" id="remember" class="w-[17px] h-[17px] accent-[#8000ff] cursor-pointer" />
         <span class="text-[13px] font-semibold text-[#6C9BB5]">Recordarme</span>
-      </label>
+      </label> -->
       <a href="#" class="text-[13px] font-bold text-[#6C9BB5] no-underline transition-opacity hover:opacity-70">
         ¿Olvidaste tu contraseña?
       </a>
@@ -217,7 +217,7 @@ try {
     return
   }
 
-  localStorage.setItem('token', data.token)
+document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
   window.location.href = '/dashboard'
 
 } catch (e) {

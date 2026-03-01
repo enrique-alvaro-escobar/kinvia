@@ -4,59 +4,73 @@ import StatCard from "../components/StatCard.astro";
 import TaskItem from "../components/TaskItem.astro";
 import EventItem from "../components/EventItem.astro";
 import BottomNav from "../components/BottomNav.astro";
+import { query } from "../lib/db.js";
 
-// ── En producción, reemplaza esto por llamadas a tus API routes ──
-// const tasksRes = await fetch(new URL('/api/tareas', Astro.url));
-// const tasks = await tasksRes.json();
-// ────────────────────────────────────────────────────────────────
+// ── Leer token de la cookie ─────────────────────────────────────
+const token = Astro.cookies.get("token")?.value;
+if (!token) return Astro.redirect("/login");
 
-const user = {
-  name: "María",
-  careRecipient: "Abuela Rosa",
-};
+let user = { nombre: "Usuario", email: "" };
+let tasks = [];
+let events = [];
+let stats = { tareasPendientes: 0, proximosEventos: 0, notasCompartidas: 0 };
+let familyMembers = [];
 
-const stats = {
-  tareasPendientes: 2,
-  proximosEventos: 1,
-  notasCompartidas: 4,
-};
+try {
+  const payload = JSON.parse(Buffer.from(token, "base64").toString());
+  const grupo_id = payload.grupo_id;
+  user = { nombre: payload.nombre, email: payload.email };
 
-const tasks = [
-  {
-    title: "Comprar medicamentos",
-    description: "Recoger recetas en la farmacia",
-    date: "24 de febrero",
-    status: "en_curso" as const,
-  },
-  {
-    title: "Cita con el médico",
-    description: "Revisión mensual con el Dr. Rodríguez a las 10:00",
-    date: "25 de febrero",
-    status: "pendiente" as const,
-  },
-  {
-    title: "Ejercicios de fisioterapia",
-    description: "Rutina de ejercicios de movilidad de 30 minutos",
-    date: "26 de febrero",
-    status: "pendiente" as const,
-  },
-];
+  // Tareas del grupo
+  const tareasRes = await query(
+    `SELECT titulo AS title, descripcion AS description,
+            TO_CHAR(fecha, 'DD "de" TMMonth') AS date,
+            estado AS status
+     FROM tareas WHERE grupo_id = $1 ORDER BY fecha ASC LIMIT 3`,
+    [grupo_id]
+  );
+  tasks = tareasRes.rows;
 
-const events = [
-  {
-    title: "Medicación especial",
-    description: "Inyección vitamina B12",
-    datetime: "28 de febrero · 12:00",
-    tag: "Medicación",
-  },
-];
+  // Próximos eventos del grupo
+  const eventosRes = await query(
+    `SELECT titulo AS title, descripcion AS description,
+            TO_CHAR(fecha_hora, 'DD "de" TMMonth · HH24:MI') AS datetime,
+            etiqueta AS tag
+     FROM eventos WHERE grupo_id = $1 AND fecha_hora > NOW() ORDER BY fecha_hora ASC LIMIT 1`,
+    [grupo_id]
+  );
+  events = eventosRes.rows;
 
-const familyMembers = [
-  { initial: "M", bg: "#6C9BB5" },
-  { initial: "J", bg: "#5a88a2" },
-  { initial: "A", bg: "#9dbed1" },
-  { initial: "C", bg: "#4a7590" },
-];
+  // Stats
+  const pendientesRes = await query(`SELECT COUNT(*) FROM tareas WHERE grupo_id = $1 AND estado != 'completada'`, [grupo_id]);
+  const eventosCount  = await query(`SELECT COUNT(*) FROM eventos WHERE grupo_id = $1 AND fecha_hora > NOW()`, [grupo_id]);
+  const notasCount    = await query(`SELECT COUNT(*) FROM notas WHERE grupo_id = $1`, [grupo_id]);
+
+  stats = {
+    tareasPendientes: parseInt(pendientesRes.rows[0].count),
+    proximosEventos:  parseInt(eventosCount.rows[0].count),
+    notasCompartidas: parseInt(notasCount.rows[0].count),
+  };
+
+  // Miembros del grupo familiar
+  const miembrosRes = await query(
+    `SELECT u.nombre FROM usuarios u
+     INNER JOIN usuarios_grupos ug ON u.id = ug.usuario_id
+     WHERE ug.grupo_id = $1`,
+    [grupo_id]
+  );
+  familyMembers = miembrosRes.rows.map(m => ({
+    initial: m.nombre.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase(),
+    bg: "#6C9BB5"
+  }));
+
+} catch (e) {
+  console.error("Error en dashboard:", e);
+}
+
+// Iniciales del usuario
+const iniciales = user.nombre.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
+const firstName = user.nombre.split(" ")[0];
 
 const iconTask = `<svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 const iconCal  = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
@@ -90,8 +104,8 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
             </div>
           </div>
           <div class="header-text">
-            <h1 class="greeting">¡Hola, {user.name}!</h1>
-            <p class="subgreeting">Cuidando de {user.careRecipient}</p>
+            <h1 class="greeting">¡Hola, {firstName}!</h1>
+            <p class="subgreeting">Bienvenido de nuevo a Kinvia</p>
           </div>
         </div>
 
@@ -161,7 +175,7 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
         <div class="card-header">
           <div class="card-titles">
             <h2 class="card-title">Grupo familiar</h2>
-            <p class="card-sub">Familia González</p>
+            <p class="card-sub">{familyMembers.length} miembros</p>
           </div>
           <a href="/grupo" class="card-arrow" aria-label="Ver grupo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
