@@ -264,7 +264,7 @@
       if (!res.ok) { setLoading(false); showError(data.error ?? 'Error al crear la cuenta.'); return; }
       successMsg.classList.remove('hidden');
       successMsg.classList.add('visible');
-      localStorage.setItem('token', data.token);
+document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
       setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
     } catch {
       setLoading(false);
