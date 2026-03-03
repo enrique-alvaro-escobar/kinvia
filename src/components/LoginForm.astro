@@ -191,16 +191,10 @@
 
     setLoading(true);
 
-    // ── Conecta Supabase aquí ──────────────────────────────────
-    // const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass })
-    // if (error) { setLoading(false); showError('Email o contraseña incorrectos.'); return; }
-    // window.location.href = '/dashboard';
-    // ──────────────────────────────────────────────────────────
-
     setTimeout(() => {
   setLoading(false);
   showError('Email o contraseña incorrectos. Inténtalo de nuevo.');
-}, 1800);
+});
 
 try {
   const res = await fetch('/api/login', {

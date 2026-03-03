@@ -41,23 +41,23 @@ const existing = await query('SELECT id FROM usuarios WHERE email = $1', [email.
 
     const user = result.rows[0];
 // Crear grupo familiar automáticamente
-const groupResult = await query(
-  'INSERT INTO grupos (nombre) VALUES ($1) RETURNING id',
-  [`Familia ${name.trim().split(' ')[0]}`]
-);
-const grupo = groupResult.rows[0];
+// const groupResult = await query(
+//   'INSERT INTO grupos (nombre) VALUES ($1) RETURNING id',
+//   [`Familia ${name.trim().split(' ')[0]}`]
+// );
+// const grupo = groupResult.rows[0];
 
 // Asignar usuario al grupo como admin
-await query(
-  'INSERT INTO usuarios_grupos (usuario_id, grupo_id, rol) VALUES ($1, $2, $3)',
-  [user.id, grupo.id, 'admin']
-);
+// await query(
+//   'INSERT INTO usuarios_grupos (usuario_id, grupo_id, rol) VALUES ($1, $2, $3)',
+//   [user.id, grupo.id, 'admin']
+// );
 const token = Buffer.from(JSON.stringify({
   id: user.id,
   email: user.email,
   nombre: user.nombre,
-  grupo_id: grupo.id,
-  rol: 'admin'
+  grupo_id: null,
+  rol: null
 })).toString('base64');
 
   return new Response(JSON.stringify({ ok: true, token, user: { id: user.id, nombre: user.nombre, email: user.email } }), {

@@ -265,7 +265,7 @@
       successMsg.classList.remove('hidden');
       successMsg.classList.add('visible');
 document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
-      setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
+      setTimeout(() => { window.location.href = '/login'; }, 1200);
     } catch {
       setLoading(false);
       showError('Error de conexión. Inténtalo de nuevo.');
