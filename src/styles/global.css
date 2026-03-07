@@ -1,1 +1,20 @@
 @import "tailwindcss";
+
+/* para que todo el navbar tenga los mismos estilos */
+:root {
+  --blue:        #6C9BB5;
+  --blue-dark:   #5a88a2;
+  --blue-darker: #4a7590;
+  --blue-light:  #9dbed1;
+
+  --blue-bg:      #eef4f8;
+  --blue-bg-soft: #f4f8fb;
+
+  --text-primary:   #1a1a2e;
+  --text-secondary: #6b6b8a;
+  --text-muted:     #a0a0bb;
+
+  --bg:    #faf8ff;
+  --white: #ffffff;
+  --border: #e8e0f5;
+}
