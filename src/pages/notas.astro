@@ -1,0 +1,105 @@
+---
+import BottomNav from "../components/BottomNav.astro";
+import "../styles/global.css";
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>Kinvia · Notas</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+</head>
+<body class="min-h-screen flex flex-col bg-[#faf8ff] text-[#1a1a2e] font-[Nunito]">
+<main class="flex-1 overflow-y-auto pb-[90px]">
+
+<!-- HEADER -->
+
+<header class="relative bg-[#6C9BB5] px-6 pt-8 pb-9 overflow-hidden">
+<div class="absolute w-[360px] h-[360px] rounded-full bg-white/5 -top-[120px] -right-[90px]"></div>
+<div class="absolute w-[240px] h-[240px] rounded-full bg-white/5 -bottom-[70px] -left-[60px]"></div>
+
+<h1 class="text-[1.45rem] font-black text-white">
+Notas
+</h1>
+
+<p class="text-[0.88rem] font-semibold text-white/70 mt-1">
+Notas compartidas del grupo
+</p>
+
+</header>
+
+<!-- CONTENT -->
+
+<div class="p-5 flex flex-col gap-4">
+
+<!-- CREAR NOTA -->
+
+<section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5">
+
+<h2 class="text-sm font-black mb-3">
+Crear nueva nota
+</h2>
+
+<input
+placeholder="Título"
+class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
+/>
+
+<textarea
+placeholder="Escribe una nota..."
+class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"
+></textarea>
+
+<button
+class="w-full bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90"
+>
+Crear nota
+</button>
+
+</section>
+
+<!-- NOTA 1 -->
+
+<section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5">
+
+<p class="font-extrabold text-sm">
+Lista de la compra
+</p>
+
+<p class="text-sm text-gray-500 mt-1">
+Leche, pan, pasta...
+</p>
+
+</section>
+
+<!-- NOTA 2 -->
+
+<section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5">
+
+<p class="font-extrabold text-sm">
+Recordatorio
+</p>
+
+<p class="text-sm text-gray-500 mt-1">
+Las medicinas están en el primer cajón de la mesita de noche.
+</p>
+
+</section>
+
+</div>
+
+</main>
+
+<BottomNav active="notas" />
+
+</body>
+</html>
