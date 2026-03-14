@@ -61,11 +61,11 @@ try {
       `SELECT
          n.titulo,
          u.nombre AS autor,
-         TO_CHAR(n.updated_at, 'DD/MM') AS fecha
+         TO_CHAR(n.created_at, 'DD/MM') AS fecha
        FROM notas n
        LEFT JOIN usuarios u ON u.id = n.creado_por
        WHERE n.grupo_id = $1
-       ORDER BY n.updated_at DESC
+       ORDER BY n.created_at DESC
        LIMIT 3`,
       [grupo_id]
     );

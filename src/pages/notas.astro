@@ -1,365 +1,355 @@
 ---
-import BottomNav from '../components/BottomNav.astro';
-import '../styles/global.css';
-import { query } from '../lib/db.js';
- 
-// Si el usuario no ha iniciado sesión, mandarlo al login
+import BottomNav from "../components/BottomNav.astro";
+import "../styles/global.css";
+import { query } from "../lib/db.js";
+
+// Obtener el token de las cookies
 const token = Astro.cookies.get('token')?.value;
-if (!token) return Astro.redirect('/login');
- 
-// Decodificar el token y sacar el grupo del usuario
-const payload  = JSON.parse(Buffer.from(token, 'base64').toString());
-const grupo_id   = payload.grupo_id;
-const usuario_id = payload.id;
-const nombre     = payload.nombre;
- 
-// Cargar todas las notas del grupo desde la base de datos
 let notas = [];
-if (grupo_id) {
-  const resultado = await query(
-    `SELECT
-       n.id,
-       n.titulo,
-       n.contenido,
-       n.creado_por,
-       u.nombre AS autor,
-       TO_CHAR(n.updated_at, 'DD/MM/YYYY') AS fecha
-     FROM notas n
-     LEFT JOIN usuarios u ON u.id = n.creado_por
-     WHERE n.grupo_id = $1
-     ORDER BY n.updated_at DESC`,
-    [grupo_id]
-  );
-  notas = resultado.rows;
+let grupoId = null;
+
+if (token) {
+  try {
+    const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+    grupoId = payload.grupo_id;
+    
+    if (grupoId) {
+      const result = await query(
+        `SELECT n.id, n.titulo, n.contenido, n.created_at, u.nombre as creado_por_nombre 
+         FROM notas n 
+         LEFT JOIN usuarios u ON n.creado_por = u.id 
+         WHERE n.grupo_id = $1 
+         ORDER BY n.created_at DESC`,
+        [grupoId]
+      );
+      notas = result.rows;
+    }
+  } catch (e) {
+    console.error('Error al cargar notas:', e);
+  }
 }
 ---
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kinvia · Notas</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>Kinvia · Notas</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
 </head>
-<body>
-<main>
- 
-  <!-- Cabecera azul igual que el resto de páginas -->
-  <header class="page-header">
-    <div class="bubble b1"></div>
-    <div class="bubble b2"></div>
-    <h1 class="header-title">Notas</h1>
-    <p class="header-sub">Notas compartidas del grupo</p>
-  </header>
- 
-  <div class="content">
- 
-    <!-- Si el usuario no tiene grupo, mostrar aviso -->
-    {!grupo_id && (
-      <div class="sin-grupo">
-        <p>Necesitas pertenecer a un grupo para ver y crear notas.</p>
-        <a href="/grupo">Ir a mi grupo</a>
-      </div>
-    )}
- 
-    <!-- Formulario para crear una nota nueva -->
-    {grupo_id && (
-      <section class="card">
-        <h2 class="card-title">Nueva nota</h2>
-        <div id="errorBox" class="error-box" style="display:none"></div>
-        <input id="inputTitulo" type="text" placeholder="Título" class="campo" maxlength="200" />
-        <textarea id="inputContenido" placeholder="Escribe aquí..." class="campo campo-area"></textarea>
-        <button id="btnCrear" class="btn-principal">Guardar nota</button>
-      </section>
-    )}
- 
-    <!-- Lista de notas del grupo -->
-    <div id="listaNotas">
-      {notas.map(nota => (
-        <section class="card nota-card" data-id={nota.id}
-                 data-es-autor={nota.creado_por === usuario_id ? "true" : "false"}>
-          <!-- Modo lectura -->
-          <div class="modo-lectura">
-            <div class="nota-cabecera">
-              <div>
-                <p class="nota-titulo">{nota.titulo}</p>
-                <p class="nota-meta">{nota.autor} · {nota.fecha}</p>
-              </div>
-              {(nota.creado_por === usuario_id) && (
-                <div class="nota-acciones">
-                  <button class="btn-editar" aria-label="Editar">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                  <button class="btn-eliminar" aria-label="Eliminar">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                      <path d="M10 11v6M14 11v6"/>
-                      <path d="M9 6V4h6v2"/>
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
-            <p class="nota-contenido">{nota.contenido}</p>
-          </div>
-          <!-- Modo edición (oculto por defecto) -->
-          <div class="modo-edicion" style="display:none">
-            <input type="text" class="campo edit-titulo" value={nota.titulo} maxlength="200" />
-            <textarea class="campo campo-area edit-contenido">{nota.contenido}</textarea>
-            <div class="edit-botones">
-              <button class="btn-guardar-edit btn-principal">Guardar cambios</button>
-              <button class="btn-cancelar-edit btn-secundario">Cancelar</button>
-            </div>
-          </div>
-        </section>
-      ))}
-      {notas.length === 0 && grupo_id && (
-        <p class="sin-notas">Todavía no hay notas en el grupo. ¡Crea la primera!</p>
-      )}
-    </div>
- 
-  </div>
-</main>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --blue: #6C9BB5; --blue-dark: #4a7590; --blue-bg: #eef4f8;
-    --text: #1a1a2e; --text-sec: #6b6b8a; --text-muted: #a0a0bb;
-    --bg: #faf8ff; --white: #ffffff; --border: #e8e0f5;
-    --radius: 16px; --shadow: 0 2px 16px rgba(108,155,181,0.10);
-  }
-  html, body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); }
-  body { display: flex; flex-direction: column; min-height: 100dvh; }
-  main { flex: 1; padding-bottom: 90px; }
- 
-  /* Cabecera azul */
-  .page-header { position: relative; background: #6C9BB5; padding: 32px 24px 36px; overflow: hidden; }
-  .bubble { position: absolute; border-radius: 50%; pointer-events: none; }
-  .b1 { width: 360px; height: 360px; background: rgba(255,255,255,0.06); top: -120px; right: -90px; }
-  .b2 { width: 240px; height: 240px; background: rgba(255,255,255,0.05); bottom: -70px; left: -60px; }
-  .header-title { position: relative; z-index: 1; font-size: 1.45rem; font-weight: 900; color: white; }
-  .header-sub   { position: relative; z-index: 1; font-size: 0.88rem; color: rgba(255,255,255,0.75); font-weight: 600; margin-top: 2px; }
- 
-  /* Contenido */
-  .content { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
- 
-  /* Tarjetas */
-  .card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); padding: 20px 22px; animation: fadeUp 0.3s ease both; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  .card-title { font-size: 1rem; font-weight: 900; margin-bottom: 14px; }
- 
-  /* Campos de formulario */
-  .campo { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 11px; font-family: inherit; font-size: 0.92rem; font-weight: 700; color: var(--text); outline: none; margin-bottom: 10px; transition: border-color 0.2s; }
-  .campo:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(108,155,181,0.15); }
-  .campo-area { height: 90px; resize: none; }
- 
-  /* Botones */
-  .btn-principal { width: 100%; padding: 13px; background: var(--blue); color: white; border: none; border-radius: 12px; font-family: inherit; font-size: 0.95rem; font-weight: 800; cursor: pointer; transition: opacity 0.2s, transform 0.2s; }
-  .btn-principal:hover { opacity: 0.88; transform: translateY(-1px); }
-  .btn-principal:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .btn-secundario { flex: 1; padding: 12px; background: var(--bg); color: var(--text-sec); border: 1.5px solid var(--border); border-radius: 12px; font-family: inherit; font-size: 0.92rem; font-weight: 800; cursor: pointer; }
- 
-  /* Caja de error */
-  .error-box { background: #fff1f3; color: #e03b5a; border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; font-size: 0.82rem; font-weight: 700; }
- 
-  /* Notas */
-  .nota-cabecera { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-  .nota-titulo   { font-size: 0.95rem; font-weight: 900; color: var(--text); }
-  .nota-meta     { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); margin-top: 2px; }
-  .nota-contenido{ font-size: 0.85rem; color: var(--text-sec); font-weight: 600; line-height: 1.5; white-space: pre-wrap; }
-  .nota-acciones { display: flex; gap: 6px; flex-shrink: 0; }
-  .btn-editar, .btn-eliminar { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-  .btn-editar   { background: var(--blue-bg); color: var(--blue-dark); }
-  .btn-editar:hover { background: var(--blue); color: white; }
-  .btn-eliminar { background: #fff1f3; color: #e03b5a; }
-  .btn-eliminar:hover { background: #e03b5a; color: white; }
-  .btn-editar svg, .btn-eliminar svg { width: 15px; height: 15px; }
-  .edit-botones { display: flex; gap: 8px; margin-top: 4px; }
-  .edit-botones .btn-principal { flex: 2; width: auto; }
- 
-  /* Sin grupo / sin notas */
-  .sin-grupo { text-align: center; padding: 30px 20px; color: var(--text-sec); font-size: 0.9rem; font-weight: 700; }
-  .sin-grupo a { color: var(--blue); text-decoration: underline; display: block; margin-top: 8px; }
-  .sin-notas { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem; font-weight: 700; }
-</style>
+<body class="min-h-screen flex flex-col bg-[#faf8ff] text-[#1a1a2e] font-[Nunito]">
+<main class="flex-1 overflow-y-auto pb-[90px]">
+
+<!-- HEADER -->
+
+<header class="relative bg-[#6C9BB5] px-6 pt-8 pb-9 overflow-hidden">
+<div class="absolute w-[360px] h-[360px] rounded-full bg-white/5 -top-[120px] -right-[90px]"></div>
+<div class="absolute w-[240px] h-[240px] rounded-full bg-white/5 -bottom-[70px] -left-[60px]"></div>
+
+<h1 class="text-[1.45rem] font-black text-white">
+Notas
+</h1>
+
+<p class="text-[0.88rem] font-semibold text-white/70 mt-1">
+Notas compartidas del grupo
+</p>
+
+</header>
+
+<!-- CONTENT -->
+
+<div class="p-5 flex flex-col gap-4">
+
+<!-- CREAR NOTA -->
+
+<section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5">
+
+<h2 class="text-sm font-black mb-3">
+Crear nueva nota
+</h2>
+
+<form id="form-nota">
+<input
+type="text"
+id="nota-titulo"
+placeholder="Titulo"
+class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
+/>
+
+<textarea
+id="nota-contenido"
+placeholder="Escribe una nota..."
+class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"
+required
+></textarea>
+
+<p id="nota-error" class="text-red-500 text-xs mb-2 hidden"></p>
+
+<button
+type="submit"
+id="btn-crear-nota"
+class="w-full bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90 disabled:opacity-50"
+>
+Crear nota
+</button>
+</form>
+
+</section>
+
 <script>
-  // ─── Crear nota ───────────────────────────────────────
-  const btnCrear    = document.getElementById('btnCrear');
-  const inputTitulo = document.getElementById('inputTitulo');
-  const inputCont   = document.getElementById('inputContenido');
-  const errorBox    = document.getElementById('errorBox');
-  const listaNotas  = document.getElementById('listaNotas');
- 
-  if (btnCrear) {
-    btnCrear.addEventListener('click', async () => {
-      errorBox.style.display = "none";
-      btnCrear.disabled = true;
-      btnCrear.textContent = 'Guardando...';
- 
-      const res  = await fetch('/api/notas/crear', {
+document.getElementById('form-nota').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const titulo = document.getElementById('nota-titulo').value.trim();
+  const contenido = document.getElementById('nota-contenido').value.trim();
+  const errorEl = document.getElementById('nota-error');
+  const btnCrear = document.getElementById('btn-crear-nota');
+  
+  errorEl.classList.add('hidden');
+  
+  if (!contenido) {
+    errorEl.textContent = 'El contenido no puede estar vacio.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  
+  btnCrear.disabled = true;
+  btnCrear.textContent = 'Guardando...';
+  
+  try {
+    const res = await fetch('/api/notas/crear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo, contenido })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Error al crear la nota');
+    }
+    
+    // Recargar la página para mostrar la nueva nota
+    window.location.reload();
+    
+  } catch (error) {
+    errorEl.textContent = error.message;
+    errorEl.classList.remove('hidden');
+    btnCrear.disabled = false;
+    btnCrear.textContent = 'Crear nota';
+  }
+});
+</script>
+
+<!-- LISTA DE NOTAS -->
+
+{notas.length === 0 ? (
+  <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5 text-center">
+    <p class="text-sm text-gray-500">
+      No hay notas todavia. Crea la primera!
+    </p>
+  </section>
+) : (
+  notas.map((nota) => (
+    <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5" data-nota-id={nota.id}>
+      <div class="flex justify-between items-start gap-3">
+        <div class="flex-1">
+          {nota.titulo && (
+            <p class="font-extrabold text-sm mb-1 nota-titulo">
+              {nota.titulo}
+            </p>
+          )}
+          <p class="text-sm text-gray-500 whitespace-pre-wrap nota-contenido">
+            {nota.contenido}
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button 
+            type="button"
+            class="btn-editar p-2 text-[#6C9BB5] hover:bg-[#6C9BB5]/10 rounded-lg transition-colors"
+            data-id={nota.id}
+            data-titulo={nota.titulo || ''}
+            data-contenido={nota.contenido}
+            title="Editar nota"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+              <path d="m15 5 4 4"/>
+            </svg>
+          </button>
+          <button 
+            type="button"
+            class="btn-eliminar p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            data-id={nota.id}
+            title="Eliminar nota"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+              <line x1="10" x2="10" y1="11" y2="17"/>
+              <line x1="14" x2="14" y1="11" y2="17"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="flex justify-between items-center mt-3 pt-3 border-t border-[#e8e0f5]">
+        <p class="text-xs text-gray-400">
+          {nota.creado_por_nombre || 'Usuario'}
+        </p>
+        <p class="text-xs text-gray-400">
+          {new Date(nota.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+        </p>
+      </div>
+    </section>
+  ))
+)}
+
+<!-- Modal de edicion -->
+<div id="modal-editar" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-5">
+  <div class="bg-white rounded-2xl p-5 w-full max-w-md">
+    <h3 class="font-black text-sm mb-3">Editar nota</h3>
+    <form id="form-editar">
+      <input type="hidden" id="editar-id" />
+      <input
+        type="text"
+        id="editar-titulo"
+        placeholder="Titulo"
+        class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
+      />
+      <textarea
+        id="editar-contenido"
+        placeholder="Contenido..."
+        class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"
+        required
+      ></textarea>
+      <p id="editar-error" class="text-red-500 text-xs mb-2 hidden"></p>
+      <div class="flex gap-3">
+        <button
+          type="button"
+          id="btn-cancelar-editar"
+          class="flex-1 border border-[#e8e0f5] text-gray-600 font-extrabold rounded-xl py-3 text-sm hover:bg-gray-50"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          id="btn-guardar-editar"
+          class="flex-1 bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90 disabled:opacity-50"
+        >
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Eliminar nota
+document.querySelectorAll('.btn-eliminar').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (!confirm('¿Estas seguro de que quieres eliminar esta nota?')) return;
+    
+    const id = btn.dataset.id;
+    btn.disabled = true;
+    
+    try {
+      const res = await fetch('/api/notas/eliminar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo: inputTitulo.value, contenido: inputCont.value })
+        body: JSON.stringify({ id: Number(id) })
       });
-      const data = await res.json();
- 
+      
       if (!res.ok) {
-        errorBox.textContent = data.error;
-        errorBox.style.display = "block";
-        btnCrear.disabled = false;
-        btnCrear.textContent = 'Guardar nota';
-        return;
+        const data = await res.json();
+        throw new Error(data.error || 'Error al eliminar');
       }
- 
-      // Añadir la nota nueva al principio de la lista sin recargar
-      const n = data.nota;
-      const nueva = document.createElement("section");
-      nueva.className = "card nota-card";
-      nueva.dataset.id = n.id;
-      nueva.dataset.esAutor = "true";
-      nueva.innerHTML = `
-        <div class="modo-lectura">
-          <div class="nota-cabecera">
-            <div>
-              <p class="nota-titulo">${n.titulo}</p>
-              <p class="nota-meta">Tú · Ahora</p>
-            </div>
-            <div class="nota-acciones">
-              <button class="btn-editar" aria-label="Editar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-              <button class="btn-eliminar" aria-label="Eliminar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <p class="nota-contenido">${n.contenido}</p>
-        </div>
-        <div class="modo-edicion" style="display:none">
-          <input type="text" class="campo edit-titulo" value="${n.titulo}" maxlength="200" />
-          <textarea class="campo campo-area edit-contenido">${n.contenido}</textarea>
-          <div class="edit-botones">
-            <button class="btn-guardar-edit btn-principal">Guardar cambios</button>
-            <button class="btn-cancelar-edit btn-secundario">Cancelar</button>
-          </div>
-        </div>`,
-      `;
- 
-      // Quitar el mensaje "todavía no hay notas" si existía
-      const sinNotas = listaNotas.querySelector('.sin-notas');
-      if (sinNotas) sinNotas.remove();
- 
-      listaNotas.prepend(nueva);
-      activarBotones(nueva);
- 
-      // Limpiar el formulario
-      inputTitulo.value = '';
-      inputCont.value   = '';
-      btnCrear.disabled = false;
-      btnCrear.textContent = 'Guardar nota';
+      
+      window.location.reload();
+    } catch (error) {
+      alert(error.message);
+      btn.disabled = false;
+    }
+  });
+});
+
+// Editar nota - abrir modal
+document.querySelectorAll('.btn-editar').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const modal = document.getElementById('modal-editar');
+    document.getElementById('editar-id').value = btn.dataset.id;
+    document.getElementById('editar-titulo').value = btn.dataset.titulo;
+    document.getElementById('editar-contenido').value = btn.dataset.contenido;
+    document.getElementById('editar-error').classList.add('hidden');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  });
+});
+
+// Cerrar modal
+document.getElementById('btn-cancelar-editar').addEventListener('click', () => {
+  const modal = document.getElementById('modal-editar');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+});
+
+// Guardar edicion
+document.getElementById('form-editar').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const id = document.getElementById('editar-id').value;
+  const titulo = document.getElementById('editar-titulo').value.trim();
+  const contenido = document.getElementById('editar-contenido').value.trim();
+  const errorEl = document.getElementById('editar-error');
+  const btnGuardar = document.getElementById('btn-guardar-editar');
+  
+  errorEl.classList.add('hidden');
+  
+  if (!contenido) {
+    errorEl.textContent = 'El contenido no puede estar vacio.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  
+  btnGuardar.disabled = true;
+  btnGuardar.textContent = 'Guardando...';
+  
+  try {
+    const res = await fetch('/api/notas/editar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: Number(id), titulo, contenido })
     });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Error al editar');
+    }
+    
+    window.location.reload();
+  } catch (error) {
+    errorEl.textContent = error.message;
+    errorEl.classList.remove('hidden');
+    btnGuardar.disabled = false;
+    btnGuardar.textContent = 'Guardar';
   }
- 
-  // ─── Activar botones de editar y eliminar en una tarjeta ─
-  function activarBotones(card) {
-    const notaId    = card.dataset.id;
-    const lectura   = card.querySelector('.modo-lectura');
-    const edicion   = card.querySelector('.modo-edicion');
-    const btnEdit   = card.querySelector('.btn-editar');
-    const btnDel    = card.querySelector('.btn-eliminar');
-    const btnGuardar= card.querySelector('.btn-guardar-edit');
-    const btnCanel  = card.querySelector('.btn-cancelar-edit');
-    const editTit   = card.querySelector('.edit-titulo');
-    const editCont  = card.querySelector('.edit-contenido');
-    const tituloEl  = card.querySelector('.nota-titulo');
-    const contenEl  = card.querySelector('.nota-contenido');
- 
-    // Abrir modo edición
-    if (btnEdit) {
-      btnEdit.addEventListener('click', () => {
-        lectura.style.display = "none";
-        edicion.style.display = "block";
-        editTit.focus();
-      });
-    }
- 
-    // Cancelar edición
-    if (btnCanel) {
-      btnCanel.addEventListener('click', () => {
-        edicion.style.display = "none";
-        lectura.style.display = "block";
-      });
-    }
- 
-    // Guardar edición
-    if (btnGuardar) {
-      btnGuardar.addEventListener('click', async () => {
-        btnGuardar.disabled = true;
-        btnGuardar.textContent = 'Guardando...';
- 
-        const res  = await fetch('/api/notas/editar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nota_id:   Number(notaId),
-            titulo:    editTit.value,
-            contenido: editCont.value
-          })
-        });
-        const data = await res.json();
- 
-        if (!res.ok) { alert(data.error); btnGuardar.disabled = false; btnGuardar.textContent = "Guardar cambios"; return; }
- 
-        // Actualizar el texto visible en la tarjeta
-        tituloEl.textContent = data.nota.titulo;
-        contenEl.textContent = data.nota.contenido;
-        edicion.style.display = "none";
-        lectura.style.display = "block";
-        btnGuardar.disabled = false;
-        btnGuardar.textContent = 'Guardar cambios';
-      });
-    }
- 
-    // Eliminar nota
-    if (btnDel) {
-      btnDel.addEventListener('click', async () => {
-        if (!confirm('¿Seguro que quieres eliminar esta nota?')) return;
- 
-        const res  = await fetch('/api/notas/eliminar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nota_id: Number(notaId) })
-        });
-        const data = await res.json();
- 
-        if (!res.ok) { alert(data.error); return; }
- 
-        // Quitar la tarjeta de la pantalla
-        card.remove();
-      });
-    }
-  }
- 
-  // Activar botones en todas las notas que ya estaban en la página
-  document.querySelectorAll('.nota-card').forEach(activarBotones);
+});
 </script>
+
+</div>
+
+</main>
+
+<BottomNav active="notas" />
+
 </body>
 </html>
- </body>
-<BottomNav active="notas" />
