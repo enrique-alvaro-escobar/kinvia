@@ -1,6 +1,37 @@
 ---
-import BottomNav from "../components/BottomNav.astro";
-import "../styles/global.css";
+import BottomNav from '../components/BottomNav.astro';
+import '../styles/global.css';
+import { query } from '../lib/db.js';
+ 
+// Si el usuario no ha iniciado sesión, mandarlo al login
+const token = Astro.cookies.get('token')?.value;
+if (!token) return Astro.redirect('/login');
+ 
+// Decodificar el token y sacar el grupo del usuario
+const payload  = JSON.parse(Buffer.from(token, 'base64').toString());
+const grupo_id   = payload.grupo_id;
+const usuario_id = payload.id;
+const nombre     = payload.nombre;
+ 
+// Cargar todas las notas del grupo desde la base de datos
+let notas = [];
+if (grupo_id) {
+  const resultado = await query(
+    `SELECT
+       n.id,
+       n.titulo,
+       n.contenido,
+       n.creado_por,
+       u.nombre AS autor,
+       TO_CHAR(n.updated_at, 'DD/MM/YYYY') AS fecha
+     FROM notas n
+     LEFT JOIN usuarios u ON u.id = n.creado_por
+     WHERE n.grupo_id = $1
+     ORDER BY n.updated_at DESC`,
+    [grupo_id]
+  );
+  notas = resultado.rows;
+}
 ---
 
 <!DOCTYPE html>
