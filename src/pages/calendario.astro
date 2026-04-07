@@ -1,0 +1,552 @@
+---
+// src/pages/calendario.astro
+import BottomNav from "../components/BottomNav.astro";
+import '../styles/global.css';
+import Layout from "../layouts/Layout.astro";
+import StatCard from "../components/StatCard.astro";
+import TaskItem from "../components/TaskItem.astro";
+import EventItem from "../components/EventItem.astro";
+import { query } from "../lib/db.js";
+
+const eventos = [
+  { id: 1,  fecha: "2026-04-03", tipo: "cita",       titulo: "Revisión cardiología",      hora: "10:00", descripcion: "Dr. Rodríguez · Clínica Sur" },
+  { id: 2,  fecha: "2026-04-03", tipo: "medicacion", titulo: "Vitamina B12",               hora: "12:00", descripcion: "Inyección mensual" },
+  { id: 3,  fecha: "2026-04-07", tipo: "tarea",      titulo: "Comprar medicamentos",       hora: "09:00", descripcion: "Farmacia Ronda" },
+  { id: 4,  fecha: "2026-04-10", tipo: "cita",       titulo: "Fisioterapia",               hora: "11:30", descripcion: "Centro de Rehabilitación Norte" },
+  { id: 5,  fecha: "2026-04-14", tipo: "nota",       titulo: "Dieta semanal",              hora: "08:00", descripcion: "Sin sal ni grasas saturadas" },
+  { id: 6,  fecha: "2026-04-17", tipo: "tarea",      titulo: "Renovar receta",             hora: "10:00", descripcion: "Caducidad el día 20" },
+  { id: 7,  fecha: "2026-04-21", tipo: "cita",       titulo: "Análisis de sangre",         hora: "08:30", descripcion: "Hospital Central · ayunas" },
+  { id: 8,  fecha: "2026-04-24", tipo: "medicacion", titulo: "Tensión arterial",           hora: "19:00", descripcion: "Controlar 3 veces esta semana" },
+  { id: 9,  fecha: "2026-04-28", tipo: "tarea",      titulo: "Fisioterapia",               hora: "17:00", descripcion: "Rutina de movilidad 30 min" },
+  { id: 10, fecha: "2026-04-30", tipo: "cita",       titulo: "Médico de cabecera",         hora: "12:00", descripcion: "Revisión mensual general" },
+];
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kinvia · Calendario</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:        #6C9BB5;
+      --blue-dark:   #5a88a2;
+      --blue-bg:     #eef4f8;
+      --blue-bg-soft:#f4f8fb;
+      --text-primary:   #1a1a2e;
+      --text-secondary: #6b6b8a;
+      --text-muted:     #a0a0bb;
+      --bg:    #f5f7fa;
+      --white: #ffffff;
+      --border: #e2e8f0;
+
+      --color-cita:       #6C9BB5;
+      --color-tarea:      #a78bfa;
+      --color-medicacion: #fb923c;
+      --color-nota:       #34d399;
+
+      --bg-cita:       rgba(108,155,181,0.13);
+      --bg-tarea:      rgba(167,139,250,0.13);
+      --bg-medicacion: rgba(251,146,60,0.13);
+      --bg-nota:       rgba(52,211,153,0.13);
+    }
+    html, body { height: 100%; font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+    main { flex: 1; overflow-y: auto; padding-bottom: 100px; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes spin   { to { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+<main>
+
+  <!-- HEADER -->
+  <header class="page-header">
+    <div class="bubble b1"></div>
+    <div class="bubble b2"></div>
+    <div class="header-inner">
+      <div>
+        <h1 class="header-title">Calendario</h1>
+        <p class="header-sub" id="headerSub">Cargando...</p>
+      </div>
+      <button class="add-btn" id="addBtn" aria-label="Añadir evento">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- FILTROS -->
+  <div class="filters-wrap">
+    <div class="filters">
+      <button class="filter-btn active" data-tipo="todos">Todos</button>
+      <button class="filter-btn" data-tipo="cita"><span class="fdot" style="background:var(--color-cita)"></span>Citas</button>
+      <button class="filter-btn" data-tipo="tarea"><span class="fdot" style="background:var(--color-tarea)"></span>Tareas</button>
+      <button class="filter-btn" data-tipo="medicacion"><span class="fdot" style="background:var(--color-medicacion)"></span>Medicación</button>
+      <button class="filter-btn" data-tipo="nota"><span class="fdot" style="background:var(--color-nota)"></span>Notas</button>
+    </div>
+  </div>
+
+  <!-- CALENDARIO -->
+  <div class="cal-outer">
+    <div class="cal-nav">
+      <button class="nav-btn" id="prevMonth">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="cal-month-label" id="monthLabel">—</span>
+      <button class="nav-btn" id="nextMonth">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <div class="cal-head">
+      <div>LUN</div><div>MAR</div><div>MIÉ</div><div>JUE</div><div>VIE</div>
+      <div class="wknd">SÁB</div><div class="wknd">DOM</div>
+    </div>
+
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- PANEL EVENTOS DÍA -->
+  <div class="day-panel">
+    <div class="day-panel-header">
+      <span class="day-panel-date" id="dayPanelDate">—</span>
+      <span class="day-panel-count" id="dayPanelCount"></span>
+    </div>
+    <div id="dayEventsList"></div>
+  </div>
+
+</main>
+
+<BottomNav active="calendario" />
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 class="modal-title">Nuevo evento</h3>
+      <button class="modal-close" id="modalClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="mfield">
+        <label class="mlabel">Tipo</label>
+        <div class="tipo-grid">
+          <button class="tipo-btn active" data-tipo="cita">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Cita
+          </button>
+          <button class="tipo-btn" data-tipo="tarea">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Tarea
+          </button>
+          <button class="tipo-btn" data-tipo="medicacion">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Medicación
+          </button>
+          <button class="tipo-btn" data-tipo="nota">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Nota
+          </button>
+        </div>
+      </div>
+      <div class="mfield">
+        <label class="mlabel" for="mTitulo">Título *</label>
+        <input type="text" id="mTitulo" class="minput" placeholder="Ej: Cita con el médico" />
+      </div>
+      <div class="mfield">
+        <label class="mlabel" for="mDesc">Descripción</label>
+        <input type="text" id="mDesc" class="minput" placeholder="Detalles adicionales..." />
+      </div>
+      <div class="mfield mfield-row">
+        <div class="mhalf">
+          <label class="mlabel" for="mFecha">Fecha *</label>
+          <input type="date" id="mFecha" class="minput" />
+        </div>
+        <div class="mhalf">
+          <label class="mlabel" for="mHora">Hora *</label>
+          <input type="time" id="mHora" class="minput" />
+        </div>
+      </div>
+      <p class="modal-error" id="modalError"></p>
+      <button class="modal-submit" id="modalSubmit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar evento
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* HEADER */
+  .page-header  { position:relative; background:var(--blue); padding:32px 20px 28px; overflow:hidden; }
+  .bubble       { position:absolute; border-radius:50%; pointer-events:none; }
+  .b1           { width:300px; height:300px; background:rgba(255,255,255,0.07); top:-100px; right:-80px; }
+  .b2           { width:200px; height:200px; background:rgba(255,255,255,0.05); bottom:-60px; left:-50px; }
+  .header-inner { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; }
+  .header-title { font-size:1.45rem; font-weight:900; color:#fff; }
+  .header-sub   { font-size:0.85rem; color:rgba(255,255,255,0.75); font-weight:600; margin-top:2px; }
+  .add-btn      { width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.35); color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0; }
+  .add-btn:hover { background:rgba(255,255,255,0.32); transform:rotate(90deg); }
+  .add-btn svg  { width:20px; height:20px; }
+
+  /* FILTROS */
+  .filters-wrap { background:var(--white); border-bottom:1px solid var(--border); padding:0 14px; overflow-x:auto; scrollbar-width:none; }
+  .filters-wrap::-webkit-scrollbar { display:none; }
+  .filters      { display:flex; gap:6px; padding:10px 0; min-width:max-content; }
+  .filter-btn   { display:flex; align-items:center; gap:5px; padding:5px 13px; border-radius:99px; border:1.5px solid var(--border); background:transparent; font-family:'Nunito',sans-serif; font-size:0.78rem; font-weight:700; color:var(--text-secondary); cursor:pointer; transition:all 0.18s; white-space:nowrap; }
+  .filter-btn.active { background:var(--blue); border-color:var(--blue); color:white; }
+  .filter-btn:not(.active):hover { border-color:var(--blue); color:var(--blue); }
+  .fdot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+  /* CALENDARIO */
+  .cal-outer    { background:var(--white); margin:14px 14px 0; border-radius:18px; border:1px solid var(--border); box-shadow:0 4px 24px rgba(108,155,181,0.10); overflow:hidden; }
+
+  .cal-nav      { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px; border-bottom:1px solid var(--border); }
+  .cal-month-label { font-size:1rem; font-weight:900; color:var(--text-primary); }
+  .nav-btn      { width:32px; height:32px; border-radius:9px; background:var(--blue-bg); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--blue); transition:all 0.18s; }
+  .nav-btn:hover { background:var(--blue); color:white; }
+  .nav-btn svg  { width:15px; height:15px; }
+
+  /* Cabecera días */
+  .cal-head     { display:grid; grid-template-columns:repeat(7,1fr); background:var(--blue-bg-soft); border-bottom:2px solid var(--border); }
+  .cal-head div { text-align:center; font-size:0.63rem; font-weight:900; color:var(--text-muted); letter-spacing:0.06em; padding:8px 0; border-right:1px solid var(--border); }
+  .cal-head div:last-child { border-right:none; }
+  .cal-head .wknd { color:var(--blue); }
+
+  /* Grid */
+  .cal-grid     { display:grid; grid-template-columns:repeat(7,1fr); }
+
+  .cal-cell     {
+    min-height: 76px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 5px 4px 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+    overflow: hidden;
+  }
+  .cal-cell:nth-child(7n)   { border-right:none; }
+  .cal-cell.last-row        { border-bottom:none; }
+  .cal-cell:hover:not(.other-month) { background:var(--blue-bg-soft); }
+  .cal-cell.other-month     { background:#fafbfc; cursor:default; }
+  .cal-cell.today           { background:rgba(108,155,181,0.07); }
+  .cal-cell.selected        { background:var(--blue-bg) !important; outline:2px solid var(--blue); outline-offset:-2px; }
+
+  .cell-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+  }
+  .other-month .cell-num   { color: #c8d0dc; }
+  .weekend-cell .cell-num  { color: var(--blue-dark); }
+  .today .cell-num         { background:var(--blue); color:white; }
+  .selected .cell-num      { font-weight:900; }
+  .selected:not(.today) .cell-num { color:var(--blue); }
+
+  .cell-events  { display:flex; flex-direction:column; gap:2px; }
+  .cell-ev      {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.59rem;
+    font-weight: 700;
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  .cell-ev-dot  { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .cell-ev span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cell-more    { font-size:0.58rem; font-weight:800; color:var(--text-muted); padding:1px 3px; }
+
+
+.day-panel svg {max-width: 100%;}
+
+.day-panel .dev-icon svg {max-width: 17px !important;}
+  .day-panel        { margin:12px 14px 0; background:var(--white); border-radius:18px; border:1px solid var(--border); box-shadow:0 2px 16px rgba(108,155,181,0.10); overflow:hidden; }
+  .day-panel-header { display:flex; align-items:center; gap:10px; padding:15px 18px 12px; border-bottom:1px solid var(--border); }
+  .day-panel-date   { font-size:0.96rem; font-weight:900; color:var(--text-primary); }
+  .day-panel-count  { font-size:0.7rem; font-weight:800; padding:2px 9px; background:var(--blue-bg); color:var(--blue); border-radius:99px; }
+
+  .dev-item     { display:flex; align-items:flex-start; gap:12px; padding:13px 18px; border-bottom:1px solid var(--border); transition:background 0.15s; animation:fadeUp 0.22s ease both; }
+  .dev-item:last-child { border-bottom:none; }
+  .dev-item:hover { background:var(--blue-bg-soft); }
+  .dev-stripe   { width:4px; border-radius:99px; align-self:stretch; flex-shrink:0; min-height:34px; }
+  .dev-icon     { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .dev-icon svg { width:17px; height:17px; }
+  .dev-info     { flex:1; min-width:0; }
+  .dev-top      { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:2px; }
+  .dev-titulo   { font-size:0.88rem; font-weight:800; color:var(--text-primary); }
+  .dev-hora     { font-size:0.72rem; font-weight:700; color:var(--text-muted); white-space:nowrap; }
+  .dev-desc     { font-size:0.76rem; color:var(--text-secondary); font-weight:600; }
+  .dev-badge    { display:inline-block; font-size:0.6rem; font-weight:800; padding:2px 7px; border-radius:99px; margin-top:4px; text-transform:capitalize; }
+  .day-empty    { display:flex; flex-direction:column; align-items:center; padding:28px 16px; gap:6px; }
+  .day-empty-icon { font-size:1.8rem; }
+  .day-empty p  { font-size:0.84rem; color:var(--text-muted); font-weight:600; }
+  
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(26,26,46,0.45); display:flex; align-items:flex-end; justify-content:center; z-index:500; opacity:0; pointer-events:none; transition:opacity 0.25s; backdrop-filter:blur(3px); }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal        { background:var(--white); border-radius:24px 24px 0 0; width:100%; max-width:520px; max-height:88vh; overflow-y:auto; transform:translateY(100%); transition:transform 0.32s cubic-bezier(0.34,1.3,0.64,1); }
+  .modal-overlay.open .modal { transform:translateY(0); }
+  .modal-handle { width:36px; height:4px; background:var(--border); border-radius:99px; margin:12px auto 0; }
+  .modal-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px 2px; }
+  .modal-title  { font-size:1.05rem; font-weight:900; color:var(--text-primary); }
+  .modal-close  { width:30px; height:30px; border-radius:8px; background:var(--blue-bg); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); }
+  .modal-close svg { width:14px; height:14px; }
+  .modal-body   { padding:12px 20px 32px; display:flex; flex-direction:column; gap:14px; }
+  .mfield       { display:flex; flex-direction:column; gap:6px; }
+  .mfield-row   { flex-direction:row; gap:10px; }
+  .mhalf        { flex:1; display:flex; flex-direction:column; gap:6px; }
+  .mlabel       { font-size:0.75rem; font-weight:800; color:var(--text-primary); }
+  .minput       { padding:11px 13px; border:2px solid var(--border); border-radius:11px; font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:600; color:var(--text-primary); background:white; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
+  .minput::placeholder { color:var(--text-muted); font-weight:500; }
+  .minput:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(108,155,181,0.15); }
+  .tipo-grid    { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+  .tipo-btn     { display:flex; align-items:center; gap:7px; padding:10px 12px; border:2px solid var(--border); border-radius:11px; background:white; font-family:'Nunito',sans-serif; font-size:0.8rem; font-weight:700; color:var(--text-secondary); cursor:pointer; transition:all 0.18s; }
+  .tipo-btn svg { width:15px; height:15px; flex-shrink:0; }
+  .tipo-btn.active[data-tipo="cita"]       { border-color:var(--color-cita);       background:var(--bg-cita);       color:var(--color-cita); }
+  .tipo-btn.active[data-tipo="tarea"]      { border-color:var(--color-tarea);      background:var(--bg-tarea);      color:var(--color-tarea); }
+  .tipo-btn.active[data-tipo="medicacion"] { border-color:var(--color-medicacion); background:var(--bg-medicacion); color:var(--color-medicacion); }
+  .tipo-btn.active[data-tipo="nota"]       { border-color:var(--color-nota);       background:var(--bg-nota);       color:var(--color-nota); }
+  .modal-error  { font-size:0.75rem; font-weight:700; color:#e03b5a; min-height:16px; }
+  .modal-submit { display:flex; align-items:center; justify-content:center; gap:8px; padding:14px; background:var(--blue); color:white; border:none; border-radius:12px; font-family:'Nunito',sans-serif; font-size:0.92rem; font-weight:800; cursor:pointer; transition:background 0.2s, transform 0.15s; box-shadow:0 4px 16px rgba(108,155,181,0.28); }
+  .modal-submit:hover { background:var(--blue-dark); transform:translateY(-1px); }
+  .modal-submit svg { width:16px; height:16px; }
+</style>
+
+<script define:vars={{ eventosData: eventos }}>
+  const MESES      = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DIAS_LARGO = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+  const TIPO_COLOR = { cita:'#6C9BB5', tarea:'#a78bfa', medicacion:'#fb923c', nota:'#34d399' };
+  const TIPO_BG    = { cita:'rgba(108,155,181,0.13)', tarea:'rgba(167,139,250,0.13)', medicacion:'rgba(251,146,60,0.13)', nota:'rgba(52,211,153,0.13)' };
+  const TIPO_LABEL = { cita:'Cita médica', tarea:'Tarea', medicacion:'Medicación', nota:'Nota' };
+  const TIPO_SVG   = {
+    cita:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    tarea:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
+    medicacion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+    nota:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+  };
+
+  let allEventos = [...eventosData];
+  let filtroActivo = 'todos';
+  let currentYear, currentMonth, selectedDate;
+
+  function pad(n) { return String(n).padStart(2,'0'); }
+  function toKey(y,m,d) { return `${y}-${pad(m+1)}-${pad(d)}`; }
+  function eventosFiltrados() { return filtroActivo==='todos' ? allEventos : allEventos.filter(e=>e.tipo===filtroActivo); }
+
+  function renderCalendar() {
+    const grid  = document.getElementById('calGrid');
+    const label = document.getElementById('monthLabel');
+    document.getElementById('headerSub').textContent = `${MESES[currentMonth]} ${currentYear}`;
+    label.textContent = `${MESES[currentMonth]} ${currentYear}`;
+
+    const evs = eventosFiltrados();
+    const byDate = {};
+    evs.forEach(e => { (byDate[e.fecha] = byDate[e.fecha]||[]).push(e); });
+
+    const firstDay    = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+    const daysInPrev  = new Date(currentYear, currentMonth, 0).getDate();
+    const startOffset = (firstDay+6)%7;
+    const totalCells  = Math.ceil((startOffset+daysInMonth)/7)*7;
+
+    const today    = new Date();
+    const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+    let cells = [];
+    for (let i=0; i<totalCells; i++) {
+      const isLastRow = i >= totalCells-7;
+      const col = i%7;
+      const isWeekend = col===5||col===6;
+      if (i < startOffset) {
+        const d = daysInPrev-startOffset+i+1;
+        const pm = currentMonth-1<0?11:currentMonth-1;
+        const py = currentMonth-1<0?currentYear-1:currentYear;
+        cells.push({d, key:toKey(py,pm,d), cur:false, isLastRow, isWeekend});
+      } else if (i < startOffset+daysInMonth) {
+        const d = i-startOffset+1;
+        cells.push({d, key:toKey(currentYear,currentMonth,d), cur:true, isLastRow, isWeekend});
+      } else {
+        const d = i-startOffset-daysInMonth+1;
+        const nm = currentMonth+1>11?0:currentMonth+1;
+        const ny = currentMonth+1>11?currentYear+1:currentYear;
+        cells.push({d, key:toKey(ny,nm,d), cur:false, isLastRow, isWeekend});
+      }
+    }
+
+    grid.innerHTML = cells.map(c => {
+      const isToday = c.key===todayKey && c.cur;
+      const isSel   = c.key===selectedDate;
+      const dayEvs  = byDate[c.key]||[];
+
+      let cls = 'cal-cell';
+      if (!c.cur)             cls += ' other-month';
+      if (isToday)            cls += ' today';
+      if (isSel)              cls += ' selected';
+      if (c.isWeekend&&c.cur) cls += ' weekend-cell';
+      if (c.isLastRow)        cls += ' last-row';
+
+      const evRows = dayEvs.slice(0,2).map(e=>`
+        <div class="cell-ev" style="background:${TIPO_BG[e.tipo]};color:${TIPO_COLOR[e.tipo]}">
+          <span class="cell-ev-dot" style="background:${TIPO_COLOR[e.tipo]}"></span>
+          <span>${e.titulo}</span>
+        </div>`).join('');
+      const more = dayEvs.length>2 ? `<div class="cell-more">+${dayEvs.length-2} más</div>` : '';
+
+      return `
+        <div class="${cls}" data-date="${c.key}" data-cur="${c.cur}">
+          <div class="cell-num">${c.d}</div>
+          <div class="cell-events">${evRows}${more}</div>
+        </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.cal-cell[data-cur="true"]').forEach(el => {
+      el.addEventListener('click', () => {
+        selectedDate = el.dataset.date;
+        renderCalendar();
+        renderDayPanel();
+      });
+    });
+  }
+
+  function renderDayPanel() {
+    const list  = document.getElementById('dayEventsList');
+    const title = document.getElementById('dayPanelDate');
+    const count = document.getElementById('dayPanelCount');
+
+    const [y,m,d] = selectedDate.split('-').map(Number);
+    const dateObj  = new Date(y, m-1, d);
+    title.textContent = `${DIAS_LARGO[dateObj.getDay()]}, ${d} de ${MESES[m-1]}`;
+
+    const evs = eventosFiltrados().filter(e=>e.fecha===selectedDate).sort((a,b)=>a.hora.localeCompare(b.hora));
+    count.textContent = evs.length>0 ? `${evs.length} evento${evs.length>1?'s':''}` : '';
+
+    if (!evs.length) {
+      list.innerHTML = `<div class="day-empty"><div class="day-empty-icon">📅</div><p>Sin eventos este día</p></div>`;
+      return;
+    }
+
+    list.innerHTML = evs.map((e,i) => `
+      <div class="dev-item" style="animation-delay:${i*0.05}s">
+        <div class="dev-stripe" style="background:${TIPO_COLOR[e.tipo]}"></div>
+        <div class="dev-icon"   style="background:${TIPO_BG[e.tipo]};color:${TIPO_COLOR[e.tipo]}">${TIPO_SVG[e.tipo]}</div>
+        <div class="dev-info">
+          <div class="dev-top">
+            <span class="dev-titulo">${e.titulo}</span>
+            <span class="dev-hora">🕐 ${e.hora}</span>
+          </div>
+          ${e.descripcion ? `<p class="dev-desc">${e.descripcion}</p>` : ''}
+          <span class="dev-badge" style="background:${TIPO_BG[e.tipo]};color:${TIPO_COLOR[e.tipo]}">${TIPO_LABEL[e.tipo]}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  // Filtros
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      filtroActivo = btn.dataset.tipo;
+      renderCalendar(); renderDayPanel();
+    });
+  });
+
+  // Nav mes
+  document.getElementById('prevMonth').addEventListener('click', () => {
+    if (currentMonth===0){currentMonth=11;currentYear--;}else currentMonth--;
+    renderCalendar(); renderDayPanel();
+  });
+  document.getElementById('nextMonth').addEventListener('click', () => {
+    if (currentMonth===11){currentMonth=0;currentYear++;}else currentMonth++;
+    renderCalendar(); renderDayPanel();
+  });
+
+  // Modal
+  const overlay    = document.getElementById('modalOverlay');
+  const modalClose = document.getElementById('modalClose');
+  const submitBtn  = document.getElementById('modalSubmit');
+  const modalError = document.getElementById('modalError');
+  let tipoSel = 'cita';
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    document.getElementById('mFecha').value = selectedDate;
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  });
+  function closeModal() { overlay.classList.remove('open'); document.body.style.overflow=''; modalError.textContent=''; }
+  modalClose.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if(e.target===overlay) closeModal(); });
+
+  document.querySelectorAll('.tipo-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tipo-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      tipoSel = btn.dataset.tipo;
+    });
+  });
+
+  submitBtn.addEventListener('click', async () => {
+    const titulo = document.getElementById('mTitulo').value.trim();
+    const desc   = document.getElementById('mDesc').value.trim();
+    const fecha  = document.getElementById('mFecha').value;
+    const hora   = document.getElementById('mHora').value;
+
+    if (!titulo) { modalError.textContent='El título es obligatorio.'; return; }
+    if (!fecha)  { modalError.textContent='La fecha es obligatoria.'; return; }
+    if (!hora)   { modalError.textContent='La hora es obligatoria.'; return; }
+
+    modalError.textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<svg style="width:16px;height:16px;animation:spin .8s linear infinite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg>Guardando...`;
+
+    try {
+      const res  = await fetch('/api/eventos', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tipo:tipoSel,titulo,descripcion:desc,fecha,hora}) });
+      const nuevo = res.ok ? await res.json() : {id:Date.now(),tipo:tipoSel,titulo,descripcion:desc,fecha,hora};
+      allEventos.push(nuevo);
+    } catch {
+      allEventos.push({id:Date.now(),tipo:tipoSel,titulo,descripcion:desc,fecha,hora});
+    }
+
+    selectedDate = fecha;
+    closeModal(); renderCalendar(); renderDayPanel();
+    document.getElementById('mTitulo').value='';
+    document.getElementById('mDesc').value='';
+    document.getElementById('mHora').value='';
+    document.querySelectorAll('.tipo-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.tipo-btn[data-tipo="cita"]').classList.add('active');
+    tipoSel='cita';
+    submitBtn.disabled=false;
+    submitBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Guardar evento`;
+  });
+
+  // Init
+  const now = new Date();
+  currentYear  = now.getFullYear();
+  currentMonth = now.getMonth();
+  selectedDate = toKey(currentYear, currentMonth, now.getDate());
+  renderCalendar();
+  renderDayPanel();
+</script>
+
+</body>
+</html>
