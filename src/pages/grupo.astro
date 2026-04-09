@@ -190,6 +190,9 @@ try {
             </svg>
             Invitar miembro
           </button>
+          <button id="salirGrupoBtn" class="invite-btn" style="background:#e57373;">
+            Salir del grupo
+          </button>
         </section>
 
         <!-- Miembros -->
@@ -754,6 +757,18 @@ try {
       }
     });
   }
+
+  document.getElementById("salirGrupoBtn")?.addEventListener("click", async () => {
+    if (!confirm("¿Seguro que quieres salir del grupo?")) return;
+
+    const res = await fetch('/api/grupo/salir', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.ok) {
+      document.cookie = `token=${data.token}; path=/`;
+      window.location.reload();
+    }
+  });
 </script>
 
 </body>
