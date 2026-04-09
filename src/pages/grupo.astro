@@ -47,6 +47,7 @@ try {
     );
     const colores = ["#6C9BB5", "#5a88a2", "#9dbed1", "#4a7590"];
     miembros = miembrosRes.rows.map((m, i) => ({
+      id: m.id,
       initial: m.nombre.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase(),
       bg: colores[i % colores.length],
       nombre: m.nombre,
@@ -190,9 +191,11 @@ try {
             </svg>
             Invitar miembro
           </button>
-          <button id="salirGrupoBtn" class="invite-btn" style="background:#e57373;">
-            Salir del grupo
-          </button>
+          {miembros.find(m => m.eres_tu)?.rol !== 'Admin' && (
+            <button id="salirGrupoBtn" class="invite-btn" style="background:#e57373;">
+              Salir del grupo
+            </button>
+          )}
         </section>
 
         <!-- Miembros -->
