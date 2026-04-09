@@ -190,6 +190,9 @@ try {
             </svg>
             Invitar miembro
           </button>
+          <button id="salirGrupoBtn" class="invite-btn" style="background:#e57373;">
+            Salir del grupo
+          </button>
         </section>
 
         <!-- Miembros -->
@@ -218,23 +221,6 @@ try {
                 {m.rol && <span class="badge-rol">{m.rol}</span>}
               </div>
             ))}
-          </div>
-        </section>
-
-        <!-- Actividad del grupo -->
-        <section class="card" style="animation-delay:0.11s">
-          <div class="card-header">
-            <h2 class="card-title">Actividad del grupo</h2>
-          </div>
-          <div class="card-body">
-            <div class="activity-grid">
-              {actividad.map(a => (
-                <div class="activity-cell" style={`background:${a.bg}`}>
-                  <span class="activity-val" style={`color:${a.color}`}>{a.valor}</span>
-                  <span class="activity-label">{a.label}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
       </>
@@ -771,6 +757,18 @@ try {
       }
     });
   }
+
+  document.getElementById("salirGrupoBtn")?.addEventListener("click", async () => {
+    if (!confirm("¿Seguro que quieres salir del grupo?")) return;
+
+    const res = await fetch('/api/grupo/salir', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.ok) {
+      document.cookie = `token=${data.token}; path=/`;
+      window.location.reload();
+    }
+  });
 </script>
 
 </body>
