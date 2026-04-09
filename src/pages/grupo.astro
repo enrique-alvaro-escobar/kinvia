@@ -9,6 +9,7 @@ if (!token) return Astro.redirect("/login");
 
 let grupo = { nombre: "Mi familia", cuidado: "", codigo: "" };
 let miembros = [];
+let soyAdmin = false;
 let actividad = [
   { valor: 0, label: "Tareas completadas", color: "#6C9BB5", bg: "#eef4f8" },
   { valor: 0, label: "Eventos este mes",   color: "#4ade80", bg: "#f0fdf4" },
@@ -55,6 +56,8 @@ try {
       rol: m.rol === 'admin' ? 'Admin' : null,
       eres_tu: m.id === usuario_id
     }));
+    soyAdmin = miembros.find(m => m.eres_tu)?.rol === 'Admin';
+    
 
     // Actividad real
     const tareasComp = await query(
@@ -191,7 +194,7 @@ try {
             </svg>
             Invitar miembro
           </button>
-          {miembros.find(m => m.eres_tu)?.rol !== 'Admin' && (
+          {!soyAdmin && (
             <button id="salirGrupoBtn" class="invite-btn" style="background:#e57373;">
               Salir del grupo
             </button>
@@ -222,7 +225,7 @@ try {
                   <span class="member-email">{m.email}</span>
                 </div>
                 {m.rol && <span class="badge-rol">{m.rol}</span>}
-                {m.rol !== 'Admin' && !m.eres_tu && (
+                {soyAdmin && m.rol !== 'Admin' && !m.eres_tu && (
                   <button class="expulsar-btn" data-id={m.id}>
                     Expulsar
                   </button>
@@ -493,6 +496,26 @@ try {
   }
   .invite-btn:hover { background: #2d2d4a; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(26,26,46,0.2); }
   .invite-btn svg { width: 18px; height: 18px; }
+
+  .expulsar-btn {
+    font-size: 0.70rem;
+    font-weight: 800;
+
+    padding: 4px 12px;
+    margin-left: auto;
+
+    background: #fff1f3;
+    color: #e03b5a;
+
+    border: 1px solid #f8cdd5;
+    border-radius: 99px;
+
+    cursor: pointer;
+    transition: all 0.2s;
+
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 
   /* MEMBERS */
   .members-list { display: flex; flex-direction: column; gap: 2px; }
