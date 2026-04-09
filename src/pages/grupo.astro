@@ -222,6 +222,11 @@ try {
                   <span class="member-email">{m.email}</span>
                 </div>
                 {m.rol && <span class="badge-rol">{m.rol}</span>}
+                {m.rol !== 'Admin' && !m.eres_tu && (
+                  <button class="expulsar-btn" data-id={m.id}>
+                    Expulsar
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -771,6 +776,28 @@ try {
       document.cookie = `token=${data.token}; path=/`;
       window.location.reload();
     }
+  });
+
+  document.querySelectorAll(".expulsar-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+
+      if (!confirm("¿Seguro que quieres expulsar a este usuario?")) return;
+
+      const res = await fetch('/api/grupo/expulsar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario_id: id })
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        window.location.reload();
+      } else {
+        alert(data.error || "Error al expulsar");
+      }
+    });
   });
 </script>
 
