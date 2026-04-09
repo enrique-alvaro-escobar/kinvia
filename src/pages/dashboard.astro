@@ -31,7 +31,7 @@ try {
               TO_CHAR(fecha, 'DD "de" TMMonth') AS date,
               estado AS status
        FROM tareas WHERE grupo_id = $1 ORDER BY fecha ASC LIMIT 3`,
-      [grupo_id]
+      [grupo_id],
     );
     tasks = tareasRes.rows;
 
@@ -41,18 +41,27 @@ try {
               TO_CHAR(fecha_hora, 'DD "de" TMMonth · HH24:MI') AS datetime,
               etiqueta AS tag
        FROM eventos WHERE grupo_id = $1 AND fecha_hora > NOW() ORDER BY fecha_hora ASC LIMIT 1`,
-      [grupo_id]
+      [grupo_id],
     );
     events = eventosRes.rows;
 
     // Stats
-    const pendientesRes = await query(`SELECT COUNT(*) FROM tareas WHERE grupo_id = $1 AND estado != 'completada'`, [grupo_id]);
-    const eventosCount  = await query(`SELECT COUNT(*) FROM eventos WHERE grupo_id = $1 AND fecha_hora > NOW()`, [grupo_id]);
-    const notasCount    = await query(`SELECT COUNT(*) FROM notas WHERE grupo_id = $1`, [grupo_id]);
+    const pendientesRes = await query(
+      `SELECT COUNT(*) FROM tareas WHERE grupo_id = $1 AND estado != 'completada'`,
+      [grupo_id],
+    );
+    const eventosCount = await query(
+      `SELECT COUNT(*) FROM eventos WHERE grupo_id = $1 AND fecha_hora > NOW()`,
+      [grupo_id],
+    );
+    const notasCount = await query(
+      `SELECT COUNT(*) FROM notas WHERE grupo_id = $1`,
+      [grupo_id],
+    );
 
     stats = {
       tareasPendientes: parseInt(pendientesRes.rows[0].count),
-      proximosEventos:  parseInt(eventosCount.rows[0].count),
+      proximosEventos: parseInt(eventosCount.rows[0].count),
       notasCompartidas: parseInt(notasCount.rows[0].count),
     };
 
@@ -67,7 +76,7 @@ try {
        WHERE n.grupo_id = $1
        ORDER BY n.created_at DESC
        LIMIT 3`,
-      [grupo_id]
+      [grupo_id],
     );
     notas = notasRes.rows;
 
@@ -76,30 +85,38 @@ try {
       `SELECT u.nombre FROM usuarios u
        INNER JOIN usuarios_grupos ug ON u.id = ug.usuario_id
        WHERE ug.grupo_id = $1`,
-      [grupo_id]
+      [grupo_id],
     );
-    familyMembers = miembrosRes.rows.map(m => ({
-      initial: m.nombre.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase(),
-      bg: "#6C9BB5"
+    familyMembers = miembrosRes.rows.map((m) => ({
+      initial: m.nombre
+        .split(" ")
+        .map((n: string) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase(),
+      bg: "#6C9BB5",
     }));
   }
-
 } catch (e) {
   console.error("Error en dashboard:", e);
 }
 
 // Iniciales del usuario
-const iniciales = user.nombre.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
+const iniciales = user.nombre
+  .split(" ")
+  .map((n: string) => n[0])
+  .slice(0, 2)
+  .join("")
+  .toUpperCase();
 const firstName = user.nombre.split(" ")[0];
 
 const iconTask = `<svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
-const iconCal  = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+const iconCal = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
 const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
 ---
 
 <Layout title="Kinvia · Inicio">
   <main>
-
     <!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
     <header class="dash-header">
       <!-- Pompas decorativas igual que en LoginPanel -->
@@ -118,8 +135,17 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
             />
             <div class="logo-fallback">
               <svg viewBox="0 0 32 32" fill="none">
-                <path d="M10 24 L16 8 L22 24" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12.5 19 H19.5" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                <path
+                  d="M10 24 L16 8 L22 24"
+                  stroke="white"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"></path>
+                <path
+                  d="M12.5 19 H19.5"
+                  stroke="white"
+                  stroke-width="2.5"
+                  stroke-linecap="round"></path>
               </svg>
             </div>
           </div>
@@ -129,47 +155,85 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
           </div>
         </div>
 
-        <button class="notif-btn" aria-label="Notificaciones">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        <button class="logout-btn" id="logoutBtn" aria-label="Cerrar sesión">
+          <span class="logout-text">Cerrar sesión</span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <path d="M16 17l5-5-5-5"></path>
+            <path d="M21 12H9"></path>
           </svg>
-          <span class="notif-dot"></span>
+          <span class="logout-dot"></span>
         </button>
       </div>
 
       <!-- Stat cards -->
       <div class="stat-row">
-        <StatCard icon={iconTask} count={stats.tareasPendientes} label="Tareas pendientes" />
-        <StatCard icon={iconCal}  count={stats.proximosEventos}  label="Próximos eventos" />
-        <StatCard icon={iconNote} count={stats.notasCompartidas} label="Notas compartidas" />
+        <StatCard
+          icon={iconTask}
+          count={stats.tareasPendientes}
+          label="Tareas pendientes"
+        />
+        <StatCard
+          icon={iconCal}
+          count={stats.proximosEventos}
+          label="Próximos eventos"
+        />
+        <StatCard
+          icon={iconNote}
+          count={stats.notasCompartidas}
+          label="Notas compartidas"
+        />
       </div>
     </header>
 
     <!-- ═══════════════════════ BANNER SIN GRUPO ═══════════════════════════ -->
-    {!tieneGrupo && (
-      <a href="/grupo" class="no-group-banner">
-        <div class="no-group-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    {
+      !tieneGrupo && (
+        <a href="/grupo" class="no-group-banner">
+          <div class="no-group-icon">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <div class="no-group-text">
+            <p class="no-group-title">¿No tienes grupo familiar?</p>
+            <p class="no-group-sub">Únete o crea uno para empezar →</p>
+          </div>
+          <svg
+            class="no-group-arrow"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
           </svg>
-        </div>
-        <div class="no-group-text">
-          <p class="no-group-title">¿No tienes grupo familiar?</p>
-          <p class="no-group-sub">Únete o crea uno para empezar →</p>
-        </div>
-        <svg class="no-group-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
-      </a>
-    )}
+        </a>
+      )
+    }
 
     <!-- ═══════════════════════════════ CONTENT ══════════════════════════════ -->
     <div class="content">
-
       <!-- PRÓXIMAS TAREAS -->
       <section class="card" style="animation-delay: 0.05s">
         <div class="card-header">
@@ -178,20 +242,38 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
             <p class="card-sub">Tareas asignadas para los próximos días</p>
           </div>
           <a href="/tareas" class="card-arrow" aria-label="Ver tareas">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </a>
         </div>
         <div class="card-body">
-          {tasks.map(t => (
-            <TaskItem title={t.title} description={t.description} date={t.date} status={t.status} />
-          ))}
-          {tasks.length === 0 && (
-            <p class="empty-state">
-              {tieneGrupo ? "No hay tareas próximas." : "Crea un grupo para ver las tareas."}
-            </p>
-          )}
+          {
+            tasks.map((t) => (
+              <TaskItem
+                title={t.title}
+                description={t.description}
+                date={t.date}
+                status={t.status}
+              />
+            ))
+          }
+          {
+            tasks.length === 0 && (
+              <p class="empty-state">
+                {tieneGrupo
+                  ? "No hay tareas próximas."
+                  : "Crea un grupo para ver las tareas."}
+              </p>
+            )
+          }
         </div>
       </section>
 
@@ -203,20 +285,38 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
             <p class="card-sub">Citas y eventos en el calendario</p>
           </div>
           <a href="/calendario" class="card-arrow" aria-label="Ver calendario">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </a>
         </div>
         <div class="card-body">
-          {events.map(e => (
-            <EventItem title={e.title} description={e.description} datetime={e.datetime} tag={e.tag} />
-          ))}
-          {events.length === 0 && (
-            <p class="empty-state">
-              {tieneGrupo ? "No hay eventos próximos." : "Crea un grupo para ver los eventos."}
-            </p>
-          )}
+          {
+            events.map((e) => (
+              <EventItem
+                title={e.title}
+                description={e.description}
+                datetime={e.datetime}
+                tag={e.tag}
+              />
+            ))
+          }
+          {
+            events.length === 0 && (
+              <p class="empty-state">
+                {tieneGrupo
+                  ? "No hay eventos próximos."
+                  : "Crea un grupo para ver los eventos."}
+              </p>
+            )
+          }
         </div>
       </section>
 
@@ -225,43 +325,77 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
         <div class="card-header">
           <div class="card-titles">
             <h2 class="card-title">Grupo familiar</h2>
-            <p class="card-sub">{tieneGrupo ? `${familyMembers.length} miembros` : "Sin grupo asignado"}</p>
+            <p class="card-sub">
+              {
+                tieneGrupo
+                  ? `${familyMembers.length} miembros`
+                  : "Sin grupo asignado"
+              }
+            </p>
           </div>
           <a href="/grupo" class="card-arrow" aria-label="Ver grupo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </a>
         </div>
         <div class="card-body">
-          {tieneGrupo ? (
-            <>
-              <div class="family-row">
-                <svg class="family-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          {
+            tieneGrupo ? (
+              <>
+                <div class="family-row">
+                  <svg
+                    class="family-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  <span class="family-count">
+                    {familyMembers.length} miembros activos
+                  </span>
+                </div>
+                <div class="avatars">
+                  {familyMembers.map((m) => (
+                    <div class="avatar" style={`background:${m.bg}`}>
+                      {m.initial}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <a href="/grupo" class="join-cta">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <line x1="19" y1="8" x2="19" y2="14" />
+                  <line x1="22" y1="11" x2="16" y2="11" />
                 </svg>
-                <span class="family-count">{familyMembers.length} miembros activos</span>
-              </div>
-              <div class="avatars">
-                {familyMembers.map(m => (
-                  <div class="avatar" style={`background:${m.bg}`}>{m.initial}</div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <a href="/grupo" class="join-cta">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <line x1="19" y1="8" x2="19" y2="14"/>
-                <line x1="22" y1="11" x2="16" y2="11"/>
-              </svg>
-              Crear o unirse a un grupo
-            </a>
-          )}
+                Crear o unirse a un grupo
+              </a>
+            )
+          }
         </div>
       </section>
 
@@ -273,39 +407,56 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
             <p class="card-sub">Notas recientes del grupo</p>
           </div>
           <a href="/notas" class="card-arrow" aria-label="Ver notas">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </a>
         </div>
         <div class="card-body">
-          {notas.length > 0 ? (
-            notas.map(n => (
-              <div class="nota-preview">
-                <div class="nota-preview-dot"></div>
-                <div>
-                  <p class="nota-preview-titulo">{n.titulo}</p>
-                  <p class="nota-preview-meta">{n.autor} · {n.fecha}</p>
+          {
+            notas.length > 0 ? (
+              notas.map((n) => (
+                <div class="nota-preview">
+                  <div class="nota-preview-dot" />
+                  <div>
+                    <p class="nota-preview-titulo">{n.titulo}</p>
+                    <p class="nota-preview-meta">
+                      {n.autor} · {n.fecha}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <p class="empty-state">Todavía no hay notas en el grupo.</p>
-          )}
+              ))
+            ) : (
+              <p class="empty-state">Todavía no hay notas en el grupo.</p>
+            )
+          }
         </div>
       </section>
-
     </div>
   </main>
 
   <BottomNav active="inicio" />
+  <script>
+    const logoutBtn = document.getElementById("logoutBtn") as HTMLButtonElement;
+    logoutBtn?.addEventListener("click", async () => {
+      await fetch("/api/logout", { method: "POST" });
+      window.location.href = "/login";
+    });
+  </script>
 </Layout>
 
 <style>
   /* ── HEADER ── */
   .dash-header {
     position: relative;
-    background: #6C9BB5;
+    background: #6c9bb5;
     padding: 22px 20px 26px;
     overflow: hidden;
   }
@@ -315,9 +466,28 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
     border-radius: 50%;
     pointer-events: none;
   }
-  .b1 { width: 320px; height: 320px; background: rgba(255,255,255,0.06); top: -100px; right: -80px; }
-  .b2 { width: 220px; height: 220px; background: rgba(255,255,255,0.05); bottom: -60px; left: -50px; }
-  .b3 { width: 140px; height: 140px; background: rgba(255,255,255,0.04); top: 50%; left: 30%; transform: translate(-50%,-50%); }
+  .b1 {
+    width: 320px;
+    height: 320px;
+    background: rgba(255, 255, 255, 0.06);
+    top: -100px;
+    right: -80px;
+  }
+  .b2 {
+    width: 220px;
+    height: 220px;
+    background: rgba(255, 255, 255, 0.05);
+    bottom: -60px;
+    left: -50px;
+  }
+  .b3 {
+    width: 140px;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.04);
+    top: 50%;
+    left: 30%;
+    transform: translate(-50%, -50%);
+  }
 
   .header-top {
     position: relative;
@@ -334,33 +504,81 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
     gap: 10px;
   }
 
-  .header-logo { width: 40px; height: 40px; flex-shrink: 0; }
-  .header-logo img { width: 40px; height: 40px; object-fit: contain; }
+  .header-logo {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+  .header-logo img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
   .logo-fallback {
-    display: none; width: 40px; height: 40px;
-    background: rgba(255,255,255,0.2); border-radius: 12px;
-    align-items: center; justify-content: center;
+    display: none;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
   }
-  .logo-fallback svg { width: 24px; height: 24px; }
-
-  .greeting { font-size: 1.18rem; font-weight: 900; color: #fff; line-height: 1.2; }
-  .subgreeting { font-size: 0.76rem; color: rgba(255,255,255,0.72); font-weight: 600; margin-top: 1px; }
-
-  .notif-btn {
-    position: relative; width: 38px; height: 38px;
-    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: white; transition: background 0.2s; flex-shrink: 0;
-  }
-  .notif-btn:hover { background: rgba(255,255,255,0.25); }
-  .notif-btn svg { width: 18px; height: 18px; }
-  .notif-dot {
-    position: absolute; top: 7px; right: 7px;
-    width: 8px; height: 8px; background: #ff5e7d;
-    border-radius: 50%; border: 2px solid #6C9BB5;
+  .logo-fallback svg {
+    width: 24px;
+    height: 24px;
   }
 
-  .stat-row { position: relative; z-index: 1; display: flex; gap: 10px; }
+  .greeting {
+    font-size: 1.18rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .subgreeting {
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.72);
+    font-weight: 600;
+    margin-top: 1px;
+  }
+  .logout-btn {
+    position: relative;
+    height: 38px;
+    padding: 0 14px 0 12px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+
+  .logout-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .logout-btn svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .logout-text {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .stat-row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 10px;
+  }
 
   /* ── BANNER SIN GRUPO ── */
   .no-group-banner {
@@ -374,23 +592,50 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
     border-radius: 14px;
     text-decoration: none;
     animation: fadeUp 0.3s ease both;
-    transition: box-shadow 0.2s, transform 0.2s;
+    transition:
+      box-shadow 0.2s,
+      transform 0.2s;
   }
   .no-group-banner:hover {
-    box-shadow: 0 4px 16px rgba(255,193,7,0.22);
+    box-shadow: 0 4px 16px rgba(255, 193, 7, 0.22);
     transform: translateY(-1px);
   }
   .no-group-icon {
-    width: 38px; height: 38px; flex-shrink: 0;
-    background: #fff3cd; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    background: #fff3cd;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: #e6a817;
   }
-  .no-group-icon svg { width: 20px; height: 20px; }
-  .no-group-text { flex: 1; }
-  .no-group-title { font-size: 0.88rem; font-weight: 900; color: #7d5a00; line-height: 1.2; }
-  .no-group-sub   { font-size: 0.75rem; font-weight: 700; color: #b07d00; margin-top: 2px; }
-  .no-group-arrow { width: 16px; height: 16px; color: #e6a817; flex-shrink: 0; }
+  .no-group-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .no-group-text {
+    flex: 1;
+  }
+  .no-group-title {
+    font-size: 0.88rem;
+    font-weight: 900;
+    color: #7d5a00;
+    line-height: 1.2;
+  }
+  .no-group-sub {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #b07d00;
+    margin-top: 2px;
+  }
+  .no-group-arrow {
+    width: 16px;
+    height: 16px;
+    color: #e6a817;
+    flex-shrink: 0;
+  }
 
   /* ── CONTENT ── */
   .content {
@@ -411,79 +656,173 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
   }
 
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .card-header {
-    display: flex; align-items: flex-start; justify-content: space-between;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
     padding: 16px 18px 0;
   }
-  .card-title { font-size: 0.95rem; font-weight: 900; color: var(--text-primary); margin-bottom: 2px; }
-  .card-sub   { font-size: 0.73rem; color: var(--text-muted); font-weight: 600; }
-  .card-arrow {
-    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-    color: var(--text-muted); border-radius: 8px;
-    transition: color 0.2s, background 0.2s; text-decoration: none; flex-shrink: 0;
+  .card-title {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    margin-bottom: 2px;
   }
-  .card-arrow:hover { color: var(--blue); background: var(--blue-bg); }
-  .card-arrow svg { width: 16px; height: 16px; }
-  .card-body { padding: 6px 18px 14px; }
+  .card-sub {
+    font-size: 0.73rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .card-arrow {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    border-radius: 8px;
+    transition:
+      color 0.2s,
+      background 0.2s;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .card-arrow:hover {
+    color: var(--blue);
+    background: var(--blue-bg);
+  }
+  .card-arrow svg {
+    width: 16px;
+    height: 16px;
+  }
+  .card-body {
+    padding: 6px 18px 14px;
+  }
 
   /* ── EMPTY STATE ── */
   .empty-state {
-    font-size: 0.80rem; color: var(--text-muted); font-weight: 600;
-    text-align: center; padding: 10px 0 4px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-align: center;
+    padding: 10px 0 4px;
   }
 
   /* ── CTA UNIRSE ── */
   .join-cta {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 13px; margin-top: 4px;
-    background: var(--blue-bg); color: var(--blue);
-    border: 1.5px dashed #b0cfe0; border-radius: 12px;
-    font-size: 0.88rem; font-weight: 800; text-decoration: none;
-    transition: background 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px;
+    margin-top: 4px;
+    background: var(--blue-bg);
+    color: var(--blue);
+    border: 1.5px dashed #b0cfe0;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    text-decoration: none;
+    transition:
+      background 0.2s,
+      border-color 0.2s;
   }
-  .join-cta:hover { background: #daeef7; border-color: var(--blue); }
-  .join-cta svg { width: 18px; height: 18px; }
+  .join-cta:hover {
+    background: #daeef7;
+    border-color: var(--blue);
+  }
+  .join-cta svg {
+    width: 18px;
+    height: 18px;
+  }
 
   /* ── FAMILIA ── */
   .family-row {
-    display: flex; align-items: center; gap: 7px;
-    margin-bottom: 12px; color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
   }
-  .family-icon { width: 17px; height: 17px; color: var(--blue); flex-shrink: 0; }
-  .family-count { font-size: 0.80rem; font-weight: 700; }
-  .avatars { display: flex; gap: 8px; }
+  .family-icon {
+    width: 17px;
+    height: 17px;
+    color: var(--blue);
+    flex-shrink: 0;
+  }
+  .family-count {
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .avatars {
+    display: flex;
+    gap: 8px;
+  }
   .avatar {
-    width: 38px; height: 38px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.82rem; font-weight: 900; color: white;
-    border: 2px solid var(--white); box-shadow: 0 2px 8px rgba(108,155,181,0.25);
-    cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 900;
+    color: white;
+    border: 2px solid var(--white);
+    box-shadow: 0 2px 8px rgba(108, 155, 181, 0.25);
+    cursor: pointer;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
   }
-  .avatar:hover { transform: scale(1.12) translateY(-2px); box-shadow: 0 4px 14px rgba(108,155,181,0.35); }
-.nota-preview {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-.nota-preview:last-child { border-bottom: none; }
-.nota-preview-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--blue); flex-shrink: 0; margin-top: 6px;
-}
-.nota-preview-titulo {
-  font-size: 0.85rem; font-weight: 800; color: var(--text-primary);
-}
-.nota-preview-meta {
-  font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-top: 1px;
-}
-.empty-state {
-  font-size: 0.80rem; color: var(--text-muted); font-weight: 600;
-  text-align: center; padding: 8px 0;
-}
+  .avatar:hover {
+    transform: scale(1.12) translateY(-2px);
+    box-shadow: 0 4px 14px rgba(108, 155, 181, 0.35);
+  }
+  .nota-preview {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .nota-preview:last-child {
+    border-bottom: none;
+  }
+  .nota-preview-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--blue);
+    flex-shrink: 0;
+    margin-top: 6px;
+  }
+  .nota-preview-titulo {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+  .nota-preview-meta {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .empty-state {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-align: center;
+    padding: 8px 0;
+  }
 </style>
