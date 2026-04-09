@@ -220,23 +220,6 @@ try {
             ))}
           </div>
         </section>
-
-        <!-- Actividad del grupo -->
-        <section class="card" style="animation-delay:0.11s">
-          <div class="card-header">
-            <h2 class="card-title">Actividad del grupo</h2>
-          </div>
-          <div class="card-body">
-            <div class="activity-grid">
-              {actividad.map(a => (
-                <div class="activity-cell" style={`background:${a.bg}`}>
-                  <span class="activity-val" style={`color:${a.color}`}>{a.valor}</span>
-                  <span class="activity-label">{a.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
       </>
     ) : (
       /* ════════ SIN GRUPO: crear o unirse ════════ */
