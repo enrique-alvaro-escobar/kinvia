@@ -24,7 +24,7 @@
         <line x1="12" y1="8" x2="12" y2="12"/>
         <line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
-      <span id="errorText">Email o contraseña incorrectos</span>
+      <span id="errorText">Email o contraseña incorrectos</span> 
     </div>
 
     <!-- Email -->
@@ -191,16 +191,10 @@
 
     setLoading(true);
 
-    // ── Conecta Supabase aquí ──────────────────────────────────
-    // const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass })
-    // if (error) { setLoading(false); showError('Email o contraseña incorrectos.'); return; }
-    // window.location.href = '/dashboard';
-    // ──────────────────────────────────────────────────────────
-
-    setTimeout(() => {
+    /* setTimeout(() => {
   setLoading(false);
   showError('Email o contraseña incorrectos. Inténtalo de nuevo.');
-}, 1800);
+},1200);  */
 
 try {
   const res = await fetch('/api/login', {
