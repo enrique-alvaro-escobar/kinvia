@@ -2,11 +2,6 @@
 // src/pages/calendario.astro
 import BottomNav from "../components/BottomNav.astro";
 import '../styles/global.css';
-import Layout from "../layouts/Layout.astro";
-import StatCard from "../components/StatCard.astro";
-import TaskItem from "../components/TaskItem.astro";
-import EventItem from "../components/EventItem.astro";
-import { query } from "../lib/db.js";
 
 const eventos = [
   { id: 1,  fecha: "2026-04-03", tipo: "cita",       titulo: "Revisión cardiología",      hora: "10:00", descripcion: "Dr. Rodríguez · Clínica Sur" },
@@ -44,12 +39,10 @@ const eventos = [
       --bg:    #f5f7fa;
       --white: #ffffff;
       --border: #e2e8f0;
-
       --color-cita:       #6C9BB5;
       --color-tarea:      #a78bfa;
       --color-medicacion: #fb923c;
       --color-nota:       #34d399;
-
       --bg-cita:       rgba(108,155,181,0.13);
       --bg-tarea:      rgba(167,139,250,0.13);
       --bg-medicacion: rgba(251,146,60,0.13);
@@ -57,12 +50,14 @@ const eventos = [
     }
     @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
     @keyframes spin   { to { transform:rotate(360deg); } }
+    html, body { height: 100%; font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+    main { flex: 1; overflow-y: auto; padding-bottom: 100px; }
   </style>
 </head>
 <body>
 <main>
 
-  <!-- HEADER -->
   <header class="page-header">
     <div class="bubble b1"></div>
     <div class="bubble b2"></div>
@@ -71,15 +66,25 @@ const eventos = [
         <h1 class="header-title">Calendario</h1>
         <p class="header-sub" id="headerSub">Cargando...</p>
       </div>
-      <button class="add-btn" id="addBtn" aria-label="Añadir evento">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="add-btn" id="addBtn" aria-label="Añadir evento">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span class="add-btn-label">Añadir evento</span>
+        </button>
+        <button class="logout-btn" id="logoutBtn" aria-label="Cerrar sesión">
+          <span class="logout-text">Cerrar sesión</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <path d="M16 17l5-5-5-5"/>
+            <path d="M21 12H9"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- FILTROS -->
   <div class="filters-wrap">
     <div class="filters">
       <button class="filter-btn active" data-tipo="todos">Todos</button>
@@ -90,7 +95,6 @@ const eventos = [
     </div>
   </div>
 
-  <!-- CALENDARIO -->
   <div class="cal-outer">
     <div class="cal-nav">
       <button class="nav-btn" id="prevMonth">
@@ -101,16 +105,13 @@ const eventos = [
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
-
     <div class="cal-head">
       <div>LUN</div><div>MAR</div><div>MIÉ</div><div>JUE</div><div>VIE</div>
       <div class="wknd">SÁB</div><div class="wknd">DOM</div>
     </div>
-
     <div class="cal-grid" id="calGrid"></div>
   </div>
 
-  <!-- PANEL EVENTOS DÍA -->
   <div class="day-panel">
     <div class="day-panel-header">
       <span class="day-panel-date" id="dayPanelDate">—</span>
@@ -123,7 +124,6 @@ const eventos = [
 
 <BottomNav active="calendario" />
 
-<!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -183,281 +183,107 @@ const eventos = [
 </div>
 
 <style>
-  /* HEADER */
-  .page-header  {position: relative;background: var(--blue);padding: 36px 22px 30px;overflow: hidden;border-radius: 0 0 24px 24px; z-index: 10;}
-  .bubble       { position:absolute; border-radius:50%; pointer-events:none; }
-  .b1           { width:300px; height:300px; background:rgba(255,255,255,0.07); top:-100px; right:-80px; }
-  .b2           { width:200px; height:200px; background:rgba(255,255,255,0.05); bottom:-60px; left:-50px; }
+  .page-header { position: relative; background: var(--blue); padding: 32px 22px 28px; overflow: hidden; }
+  .bubble { position:absolute; border-radius:50%; pointer-events:none; }
+  .b1 { width:300px; height:300px; background:rgba(255,255,255,0.07); top:-100px; right:-80px; }
+  .b2 { width:200px; height:200px; background:rgba(255,255,255,0.05); bottom:-60px; left:-50px; }
   .header-inner { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; }
   .header-title { font-size:1.45rem; font-weight:900; color:#fff; }
-  .header-sub   { font-size:0.85rem; color:rgba(255,255,255,0.75); font-weight:600; margin-top:2px; }
-  .add-btn      { width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.35); color:white; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0; }
-  .add-btn:hover { background:rgba(255,255,255,0.32); transform:rotate(90deg); }
-  .add-btn svg  { width:20px; height:20px; }
+  .header-sub { font-size:0.85rem; color:rgba(255,255,255,0.75); font-weight:600; margin-top:2px; }
+  .add-btn { height:38px; padding:0 14px 0 10px; background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.35); color:white; display:flex; align-items:center; gap:7px; border-radius:99px; cursor:pointer; transition:all 0.2s; flex-shrink:0; font-family:'Nunito',sans-serif; }
+  .add-btn:hover { background:rgba(255,255,255,0.32); }
+  .add-btn svg { width:18px; height:18px; flex-shrink:0; }
+  .add-btn-label { font-size:0.8rem; font-weight:800; white-space:nowrap; }
+  .logout-btn { height:38px; padding:0 14px 0 12px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:999px; display:inline-flex; align-items:center; gap:8px; cursor:pointer; color:white; transition:background 0.2s; flex-shrink:0; white-space:nowrap; font-family:'Nunito',sans-serif; }
+  .logout-btn:hover { background:rgba(255,255,255,0.25); }
+  .logout-btn svg { width:17px; height:17px; flex-shrink:0; }
+  .logout-text { font-size:0.8rem; font-weight:800; }
 
-  /* FILTROS */
-  .filters-wrap {background: transparent;padding: 0 18px;overflow-x: auto;scrollbar-width: none;}
+  /* FIX 1: fondo blanco + borde en filtros */
+  .filters-wrap { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 18px; overflow-x: auto; scrollbar-width: none; }
   .filters-wrap::-webkit-scrollbar { display: none; }
-  .filters {display: flex;gap: 10px;padding: 2px 0 0;min-width: max-content;}
-  .filter-btn {display: flex;align-items: center;gap: 6px;padding: 9px 15px;border-radius: 999px;border: 1.5px solid var(--border);background: var(--white);font-family: 'Nunito', sans-serif;font-size: 0.82rem;font-weight: 800;color: var(--text-secondary);cursor: pointer;transition: all 0.18s;white-space: nowrap;box-shadow: 0 4px 14px rgba(26, 26, 46, 0.04);}
+  .filters { display:flex; gap:10px; padding:10px 0; min-width:max-content; }
+  .filter-btn { display:flex; align-items:center; gap:6px; padding:9px 15px; border-radius:999px; border:1.5px solid var(--border); background:var(--white); font-family:'Nunito',sans-serif; font-size:0.82rem; font-weight:800; color:var(--text-secondary); cursor:pointer; transition:all 0.18s; white-space:nowrap; box-shadow:0 4px 14px rgba(26,26,46,0.04); }
   .filter-btn.active { background:var(--blue); border-color:var(--blue); color:white; }
   .filter-btn:not(.active):hover { border-color:var(--blue); color:var(--blue); }
   .fdot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
-  /* CALENDARIO */
- .cal-outer {
-  background: var(--white);
-  margin: 0 16px;
-  border-radius: 28px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 75vh;
-  box-shadow: 0 8px 24px rgba(108,155,181,0.08);
-}
-
-  .cal-nav      { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px; border-bottom:1px solid var(--border); }
+  .cal-outer { background:var(--white); margin:0 16px; border-radius:28px; border:1px solid var(--border); overflow:hidden; display:flex; flex-direction:column; min-height:75vh; box-shadow:0 8px 24px rgba(108,155,181,0.08); }
+  .cal-nav { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px; border-bottom:1px solid var(--border); }
   .cal-month-label { font-size:1rem; font-weight:900; color:var(--text-primary); }
-  .nav-btn      { width:32px; height:32px; border-radius:9px; background:var(--blue-bg); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--blue); transition:all 0.18s; }
+  .nav-btn { width:32px; height:32px; border-radius:9px; background:var(--blue-bg); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--blue); transition:all 0.18s; }
   .nav-btn:hover { background:var(--blue); color:white; }
-  .nav-btn svg  { width:15px; height:15px; }
-
-  /* Cabecera días */
-  .cal-head     { display:grid; grid-template-columns:repeat(7,1fr); background:var(--blue-bg-soft); border-bottom:2px solid var(--border); }
-  .cal-head div { text-align:center; font-size:0.63rem; font-weight:900; color:var(--text-muted); letter-spacing:0.06em; padding:8px 0; border-right:1px solid var(--border); }
-  .cal-head div:last-child { border-right:none; }
+  .nav-btn svg { width:15px; height:15px; }
+  .cal-head { display:grid; grid-template-columns:repeat(7,1fr); background:var(--blue-bg-soft); padding:10px 10px 0; gap:8px; }
+  .cal-head div { text-align:center; font-size:0.68rem; font-weight:900; color:var(--text-muted); letter-spacing:0.08em; padding:10px 0; border-radius:12px; background:rgba(255,255,255,0.7); }
   .cal-head .wknd { color:var(--blue); }
-
-  /* Grid */
-  .cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0;
-  border-top: 1.5px solid var(--border);
-  border-left: 1.5px solid var(--border);
-  flex: 1;
-}
-
-.cal-head {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  background: var(--blue-bg-soft);
-  padding: 10px 10px 0;
-  gap: 8px;
-}
-
-.cal-head div {
-  text-align: center;
-  font-size: 0.68rem;
-  font-weight: 900;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  padding: 10px 0;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.7);
-}
-
-.cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  padding: 10px;
-  background: var(--blue-bg-soft);
-  flex: 1;
-}
-
-.cal-cell {
-  min-height: 180px;
-  background: var(--white);
-  border: 1.5px solid var(--border);
-  border-right: 1.5px solid var(--border);
-  border-bottom: 1.5px solid var(--border);
-  border-radius: 18px;
-  padding: 10px 8px 8px;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
-  overflow: hidden;
-}
-
-.cal-cell:hover:not(.other-month) {
-  background: #fcfeff;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(108, 155, 181, 0.12);
-}
-
-.cal-cell.last-row {
-  border-bottom: 1px solid var(--border);
-}
-.cal-cell:hover:not(.other-month) { background:var(--blue-bg-soft); }
-.cal-cell.other-month {
-  background: #f7f8fb;
-  opacity: 0.55;
-  cursor: default;
-}
-
-.cal-cell.today {
-  background: rgba(108, 155, 181, 0.08);
-  border-color: rgba(108, 155, 181, 0.35);
-}
-
-.cal-cell.selected {
-  background: var(--blue-bg) !important;
-  border-color: var(--blue);
-  box-shadow: 0 0 0 2px rgba(108, 155, 181, 0.18);
-}
-
-.cell-num {
-  display: inline-flex;
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 900;
-  margin-bottom: 10px;
-}
-
-.today .cell-num {
-  background: var(--blue);
-  color: white;
-}
-  .other-month .cell-num   { color: #c8d0dc; }
-  .weekend-cell .cell-num  { color: var(--blue-dark); }
-  .today .cell-num         { background:var(--blue); color:white; }
-  .selected .cell-num      { font-weight:900; }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; padding:10px; background:var(--blue-bg-soft); flex:1; }
+  .cal-cell { min-height:180px; background:var(--white); border:1.5px solid var(--border); border-radius:18px; padding:10px 8px 8px; cursor:pointer; transition:transform 0.15s,box-shadow 0.15s,background 0.15s; overflow:hidden; }
+  .cal-cell:hover:not(.other-month) { background:var(--blue-bg-soft); transform:translateY(-2px); box-shadow:0 8px 18px rgba(108,155,181,0.12); }
+  .cal-cell.last-row { border-bottom:1px solid var(--border); }
+  .cal-cell.other-month { background:#f7f8fb; opacity:0.55; cursor:default; }
+  .cal-cell.today { background:rgba(108,155,181,0.08); border-color:rgba(108,155,181,0.35); }
+  .cal-cell.selected { background:var(--blue-bg) !important; border-color:var(--blue); box-shadow:0 0 0 2px rgba(108,155,181,0.18); }
+  .cell-num { display:inline-flex; width:34px; height:34px; border-radius:12px; font-size:0.9rem; font-weight:900; margin-bottom:10px; }
+  .other-month .cell-num { color:#c8d0dc; }
+  .weekend-cell .cell-num { color:var(--blue-dark); }
+  .today .cell-num { background:var(--blue); color:white; }
+  .selected .cell-num { font-weight:900; }
   .selected:not(.today) .cell-num { color:var(--blue); }
-
-.cell-events {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.cell-ev {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 0.66rem;
-  font-weight: 800;
-  overflow: hidden;
-  white-space: nowrap;
-  line-height: 1.3;
-  max-width: 100%;
-}
-
-.cell-ev-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.cell-more {
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: var(--text-muted);
-  padding: 3px 4px 0;
-}
+  .cell-events { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+  .cell-ev { display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:999px; font-size:0.66rem; font-weight:800; overflow:hidden; white-space:nowrap; line-height:1.3; max-width:100%; }
+  .cell-ev-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
   .cell-ev span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cell-more { font-size:0.62rem; font-weight:800; color:var(--text-muted); padding:3px 4px 0; }
 
-
-
-.day-panel svg {max-width: 100%;}
-
-.day-panel .dev-icon svg {max-width: 17px !important;}
-  .day-panel {
-  margin: 4px 18px 0;
-  background: var(--white);
-  border-radius: 24px;
-  border: 1px solid var(--border);
-  box-shadow: 0 10px 28px rgba(108,155,181,0.10);
-  overflow: hidden;
-}
+  .day-panel { margin:4px 18px 24px; background:var(--white); border-radius:24px; border:1px solid var(--border); box-shadow:0 10px 28px rgba(108,155,181,0.10); overflow:hidden; }
   .day-panel-header { display:flex; align-items:center; gap:10px; padding:15px 18px 12px; border-bottom:1px solid var(--border); }
-  .day-panel-date   { font-size:0.96rem; font-weight:900; color:var(--text-primary); }
-  .day-panel-count  { font-size:0.7rem; font-weight:800; padding:2px 9px; background:var(--blue-bg); color:var(--blue); border-radius:99px; }
+  .day-panel-date { font-size:0.96rem; font-weight:900; color:var(--text-primary); }
+  .day-panel-count { font-size:0.7rem; font-weight:800; padding:2px 9px; background:var(--blue-bg); color:var(--blue); border-radius:99px; }
 
-  .dev-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-  transition: background 0.15s, transform 0.15s;
-  animation: fadeUp 0.22s ease both;
-}
+  /* FIX 2: items con stripe + icon + info */
+  .dev-item { display:flex; align-items:flex-start; gap:12px; padding:13px 18px; border-bottom:1px solid var(--border); transition:background 0.15s; animation:fadeUp 0.22s ease both; }
   .dev-item:last-child { border-bottom:none; }
-  .dev-item:hover {
-  background: var(--blue-bg-soft);
-  transform: translateY(-1px);
-}
-  .dev-stripe {
-  width: 5px;
-  border-radius: 999px;
-  align-self: stretch;
-  flex-shrink: 0;
-  min-height: 42px;
-}
-  .dev-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
+  .dev-item:hover { background:var(--blue-bg-soft); }
+  .dev-stripe { width:4px; border-radius:99px; align-self:stretch; flex-shrink:0; min-height:34px; }
+  .dev-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .dev-icon svg { width:17px; height:17px; }
-  .dev-info     { flex:1; min-width:0; }
-  .dev-top      { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:2px; }
-  .dev-titulo {
-  font-size: 0.95rem;
-  font-weight: 900;
-  color: var(--text-primary);
-}
-  .dev-hora     { font-size:0.72rem; font-weight:700; color:var(--text-muted); white-space:nowrap; }
-  .dev-desc {
-  font-size: 0.79rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-  margin-top: 2px;
-}
-  .dev-badge    { display:inline-block; font-size:0.6rem; font-weight:800; padding:2px 7px; border-radius:99px; margin-top:4px; text-transform:capitalize; }
-  .day-empty    { display:flex; flex-direction:column; align-items:center; padding:28px 16px; gap:6px; }
+  .dev-info { flex:1; min-width:0; }
+  .dev-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:2px; }
+  .dev-titulo { font-size:0.88rem; font-weight:800; color:var(--text-primary); }
+  .dev-hora { font-size:0.72rem; font-weight:700; color:var(--text-muted); white-space:nowrap; }
+  .dev-desc { font-size:0.76rem; color:var(--text-secondary); font-weight:600; }
+  .dev-badge { display:inline-block; font-size:0.6rem; font-weight:800; padding:2px 7px; border-radius:99px; margin-top:4px; text-transform:capitalize; }
+  .day-empty { display:flex; flex-direction:column; align-items:center; padding:28px 16px; gap:6px; }
   .day-empty-icon { font-size:1.8rem; }
-  .day-empty p  { font-size:0.84rem; color:var(--text-muted); font-weight:600; }
-  
+  .day-empty p { font-size:0.84rem; color:var(--text-muted); font-weight:600; }
 
-  /* MODAL */
   .modal-overlay { position:fixed; inset:0; background:rgba(26,26,46,0.45); display:flex; align-items:flex-end; justify-content:center; z-index:500; opacity:0; pointer-events:none; transition:opacity 0.25s; backdrop-filter:blur(3px); }
   .modal-overlay.open { opacity:1; pointer-events:all; }
-  .modal        { background:var(--white); border-radius:24px 24px 0 0; width:100%; max-width:520px; max-height:88vh; overflow-y:auto; transform:translateY(100%); transition:transform 0.32s cubic-bezier(0.34,1.3,0.64,1); }
+  .modal { background:var(--white); border-radius:24px 24px 0 0; width:100%; max-width:520px; max-height:88vh; overflow-y:auto; transform:translateY(100%); transition:transform 0.32s cubic-bezier(0.34,1.3,0.64,1); }
   .modal-overlay.open .modal { transform:translateY(0); }
   .modal-handle { width:36px; height:4px; background:var(--border); border-radius:99px; margin:12px auto 0; }
   .modal-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px 2px; }
-  .modal-title  { font-size:1.05rem; font-weight:900; color:var(--text-primary); }
-  .modal-close  { width:30px; height:30px; border-radius:8px; background:var(--blue-bg); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); }
+  .modal-title { font-size:1.05rem; font-weight:900; color:var(--text-primary); }
+  .modal-close { width:30px; height:30px; border-radius:8px; background:var(--blue-bg); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); }
   .modal-close svg { width:14px; height:14px; }
-  .modal-body   { padding:12px 20px 32px; display:flex; flex-direction:column; gap:14px; }
-  .mfield       { display:flex; flex-direction:column; gap:6px; }
-  .mfield-row   { flex-direction:row; gap:10px; }
-  .mhalf        { flex:1; display:flex; flex-direction:column; gap:6px; }
-  .mlabel       { font-size:0.75rem; font-weight:800; color:var(--text-primary); }
-  .minput       { padding:11px 13px; border:2px solid var(--border); border-radius:11px; font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:600; color:var(--text-primary); background:white; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
+  .modal-body { padding:12px 20px 32px; display:flex; flex-direction:column; gap:14px; }
+  .mfield { display:flex; flex-direction:column; gap:6px; }
+  .mfield-row { flex-direction:row; gap:10px; }
+  .mhalf { flex:1; display:flex; flex-direction:column; gap:6px; }
+  .mlabel { font-size:0.75rem; font-weight:800; color:var(--text-primary); }
+  .minput { padding:11px 13px; border:2px solid var(--border); border-radius:11px; font-family:'Nunito',sans-serif; font-size:0.88rem; font-weight:600; color:var(--text-primary); background:white; outline:none; transition:border-color 0.2s,box-shadow 0.2s; }
   .minput::placeholder { color:var(--text-muted); font-weight:500; }
   .minput:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(108,155,181,0.15); }
-  .tipo-grid    { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
-  .tipo-btn     { display:flex; align-items:center; gap:7px; padding:10px 12px; border:2px solid var(--border); border-radius:11px; background:white; font-family:'Nunito',sans-serif; font-size:0.8rem; font-weight:700; color:var(--text-secondary); cursor:pointer; transition:all 0.18s; }
+  .tipo-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+  .tipo-btn { display:flex; align-items:center; gap:7px; padding:10px 12px; border:2px solid var(--border); border-radius:11px; background:white; font-family:'Nunito',sans-serif; font-size:0.8rem; font-weight:700; color:var(--text-secondary); cursor:pointer; transition:all 0.18s; }
   .tipo-btn svg { width:15px; height:15px; flex-shrink:0; }
   .tipo-btn.active[data-tipo="cita"]       { border-color:var(--color-cita);       background:var(--bg-cita);       color:var(--color-cita); }
   .tipo-btn.active[data-tipo="tarea"]      { border-color:var(--color-tarea);      background:var(--bg-tarea);      color:var(--color-tarea); }
   .tipo-btn.active[data-tipo="medicacion"] { border-color:var(--color-medicacion); background:var(--bg-medicacion); color:var(--color-medicacion); }
   .tipo-btn.active[data-tipo="nota"]       { border-color:var(--color-nota);       background:var(--bg-nota);       color:var(--color-nota); }
-  .modal-error  { font-size:0.75rem; font-weight:700; color:#e03b5a; min-height:16px; }
-  .modal-submit { display:flex; align-items:center; justify-content:center; gap:8px; padding:14px; background:var(--blue); color:white; border:none; border-radius:12px; font-family:'Nunito',sans-serif; font-size:0.92rem; font-weight:800; cursor:pointer; transition:background 0.2s, transform 0.15s; box-shadow:0 4px 16px rgba(108,155,181,0.28); }
+  .modal-error { font-size:0.75rem; font-weight:700; color:#e03b5a; min-height:16px; }
+  .modal-submit { display:flex; align-items:center; justify-content:center; gap:8px; padding:14px; background:var(--blue); color:white; border:none; border-radius:12px; font-family:'Nunito',sans-serif; font-size:0.92rem; font-weight:800; cursor:pointer; transition:background 0.2s,transform 0.15s; box-shadow:0 4px 16px rgba(108,155,181,0.28); }
   .modal-submit:hover { background:var(--blue-dark); transform:translateY(-1px); }
   .modal-submit svg { width:16px; height:16px; }
 </style>
@@ -465,15 +291,14 @@ const eventos = [
 <script define:vars={{ eventosData: eventos }}>
   const MESES      = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const DIAS_LARGO = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-
   const TIPO_COLOR = { cita:'#6C9BB5', tarea:'#a78bfa', medicacion:'#fb923c', nota:'#34d399' };
   const TIPO_BG    = { cita:'rgba(108,155,181,0.13)', tarea:'rgba(167,139,250,0.13)', medicacion:'rgba(251,146,60,0.13)', nota:'rgba(52,211,153,0.13)' };
   const TIPO_LABEL = { cita:'Cita médica', tarea:'Tarea', medicacion:'Medicación', nota:'Nota' };
-  const TIPO_SVG   = {
-    cita:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
-    tarea:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
-    medicacion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
-    nota:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+  const TIPO_SVG = {
+    cita:       `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    tarea:      `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
+    medicacion: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+    nota:       `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
   };
 
   let allEventos = [...eventosData];
@@ -499,9 +324,8 @@ const eventos = [
     const daysInPrev  = new Date(currentYear, currentMonth, 0).getDate();
     const startOffset = (firstDay+6)%7;
     const totalCells  = Math.ceil((startOffset+daysInMonth)/7)*7;
-
-    const today    = new Date();
-    const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
+    const today       = new Date();
+    const todayKey    = toKey(today.getFullYear(), today.getMonth(), today.getDate());
 
     let cells = [];
     for (let i=0; i<totalCells; i++) {
@@ -528,21 +352,18 @@ const eventos = [
       const isToday = c.key===todayKey && c.cur;
       const isSel   = c.key===selectedDate;
       const dayEvs  = byDate[c.key]||[];
-
       let cls = 'cal-cell';
       if (!c.cur)             cls += ' other-month';
       if (isToday)            cls += ' today';
       if (isSel)              cls += ' selected';
       if (c.isWeekend&&c.cur) cls += ' weekend-cell';
       if (c.isLastRow)        cls += ' last-row';
-
       const evRows = dayEvs.slice(0,2).map(e=>`
         <div class="cell-ev" style="background:${TIPO_BG[e.tipo]};color:${TIPO_COLOR[e.tipo]}">
           <span class="cell-ev-dot" style="background:${TIPO_COLOR[e.tipo]}"></span>
           <span>${e.titulo}</span>
         </div>`).join('');
       const more = dayEvs.length>2 ? `<div class="cell-more">+${dayEvs.length-2} más</div>` : '';
-
       return `
         <div class="${cls}" data-date="${c.key}" data-cur="${c.cur}">
           <div class="cell-num">${c.d}</div>
@@ -579,7 +400,7 @@ const eventos = [
     list.innerHTML = evs.map((e,i) => `
       <div class="dev-item" style="animation-delay:${i*0.05}s">
         <div class="dev-stripe" style="background:${TIPO_COLOR[e.tipo]}"></div>
-        <div class="dev-icon"   style="background:${TIPO_BG[e.tipo]};color:${TIPO_COLOR[e.tipo]}">${TIPO_SVG[e.tipo]}</div>
+        <div class="dev-icon" style="background:${TIPO_BG[e.tipo]};color:${TIPO_COLOR[e.tipo]}">${TIPO_SVG[e.tipo]}</div>
         <div class="dev-info">
           <div class="dev-top">
             <span class="dev-titulo">${e.titulo}</span>
@@ -591,7 +412,6 @@ const eventos = [
       </div>`).join('');
   }
 
-  // Filtros
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -601,7 +421,6 @@ const eventos = [
     });
   });
 
-  // Nav mes
   document.getElementById('prevMonth').addEventListener('click', () => {
     if (currentMonth===0){currentMonth=11;currentYear--;}else currentMonth--;
     renderCalendar(); renderDayPanel();
@@ -611,7 +430,6 @@ const eventos = [
     renderCalendar(); renderDayPanel();
   });
 
-  // Modal
   const overlay    = document.getElementById('modalOverlay');
   const modalClose = document.getElementById('modalClose');
   const submitBtn  = document.getElementById('modalSubmit');
@@ -640,15 +458,12 @@ const eventos = [
     const desc   = document.getElementById('mDesc').value.trim();
     const fecha  = document.getElementById('mFecha').value;
     const hora   = document.getElementById('mHora').value;
-
     if (!titulo) { modalError.textContent='El título es obligatorio.'; return; }
     if (!fecha)  { modalError.textContent='La fecha es obligatoria.'; return; }
     if (!hora)   { modalError.textContent='La hora es obligatoria.'; return; }
-
     modalError.textContent = '';
     submitBtn.disabled = true;
     submitBtn.innerHTML = `<svg style="width:16px;height:16px;animation:spin .8s linear infinite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg>Guardando...`;
-
     try {
       const res  = await fetch('/api/eventos', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({tipo:tipoSel,titulo,descripcion:desc,fecha,hora}) });
       const nuevo = res.ok ? await res.json() : {id:Date.now(),tipo:tipoSel,titulo,descripcion:desc,fecha,hora};
@@ -656,7 +471,6 @@ const eventos = [
     } catch {
       allEventos.push({id:Date.now(),tipo:tipoSel,titulo,descripcion:desc,fecha,hora});
     }
-
     selectedDate = fecha;
     closeModal(); renderCalendar(); renderDayPanel();
     document.getElementById('mTitulo').value='';
@@ -669,13 +483,17 @@ const eventos = [
     submitBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Guardar evento`;
   });
 
-  // Init
   const now = new Date();
   currentYear  = now.getFullYear();
   currentMonth = now.getMonth();
   selectedDate = toKey(currentYear, currentMonth, now.getDate());
   renderCalendar();
   renderDayPanel();
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
 </script>
 
 </body>
