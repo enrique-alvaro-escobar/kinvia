@@ -37,12 +37,19 @@ try {
 
     // Próximos eventos del grupo
     const eventosRes = await query(
-      `SELECT titulo AS title, descripcion AS description,
-              TO_CHAR(fecha_hora, 'DD "de" TMMonth · HH24:MI') AS datetime,
-              etiqueta AS tag
-       FROM eventos WHERE grupo_id = $1 AND fecha_hora > NOW() ORDER BY fecha_hora ASC LIMIT 1`,
-      [grupo_id],
-    );
+  `SELECT
+     ec.titulo      AS title,
+     ec.descripcion AS description,
+     TO_CHAR(ec.fecha, 'DD "de" TMMonth') || ' · ' || TO_CHAR(ec.hora, 'HH24:MI') AS datetime,
+     ec.tipo        AS tag
+   FROM eventos_calendario ec
+   WHERE ec.grupo_id = $1
+     AND (ec.fecha > CURRENT_DATE
+          OR (ec.fecha = CURRENT_DATE AND ec.hora >= CURRENT_TIME))
+   ORDER BY ec.fecha ASC, ec.hora ASC
+   LIMIT 3`,
+  [grupo_id],
+);
     events = eventosRes.rows;
 
     // Stats
@@ -51,9 +58,12 @@ try {
       [grupo_id],
     );
     const eventosCount = await query(
-      `SELECT COUNT(*) FROM eventos WHERE grupo_id = $1 AND fecha_hora > NOW()`,
-      [grupo_id],
-    );
+  `SELECT COUNT(*) FROM eventos_calendario
+   WHERE grupo_id = $1
+     AND (fecha > CURRENT_DATE
+          OR (fecha = CURRENT_DATE AND hora >= CURRENT_TIME))`,
+  [grupo_id],
+);
     const notasCount = await query(
       `SELECT COUNT(*) FROM notas WHERE grupo_id = $1`,
       [grupo_id],
