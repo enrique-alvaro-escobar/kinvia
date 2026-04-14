@@ -380,7 +380,8 @@ import '../styles/calendario.css';
     });
   });
 
-  //Navegación mes a mes
+    //Navegación mes a mes
+  document.getElementById('prevMonth').addEventListener('click', () => {
     if (currentMonth === 0) { currentMonth = 11; currentYear--; } else currentMonth--;
     renderCalendar();
   });
