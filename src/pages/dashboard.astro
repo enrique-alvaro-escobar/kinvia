@@ -267,14 +267,17 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
         <div class="card-body">
           {
             tasks.map((t) => (
-              <TaskItem
-                title={t.title}
-                description={t.description}
-                date={t.date}
-                status={t.status}
-              />
-            ))
-          }
+    <div class="task-preview">
+      <div class="task-preview-info">
+        <span class={`task-preview-title ${t.status === "completada" ? "done" : ""}`}>{t.title}</span>
+        {t.description && <span class="task-preview-desc">{t.description}</span>}
+      </div>
+      <span class={`task-preview-badge badge-${t.status}`}>
+        {t.status === "completada" ? "Completada" : t.status === "en_curso" ? "En curso" : "Pendiente"}
+      </span>
+    </div>
+  ))
+}
           {
             tasks.length === 0 && (
               <p class="empty-state">
@@ -836,4 +839,24 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
     text-align: center;
     padding: 8px 0;
   }
+  .task-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.task-preview:last-child { border-bottom: none; }
+.task-preview-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.task-preview-title { font-size: 0.88rem; font-weight: 800; color: var(--text-primary); }
+.task-preview-title.done { text-decoration: line-through; color: var(--text-muted); }
+.task-preview-desc { font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; }
+.task-preview-badge {
+  flex-shrink: 0; font-size: 0.68rem; font-weight: 800;
+  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.badge-en_curso { background: #1a1a2e; color: #fff; }
+.badge-pendiente { background: #f0edf8; color: #6b6b8a; border: 1px solid #e8e0f5; }
+.badge-completada { background: #d4eef7; color: #4a7590; }
 </style>

@@ -9,6 +9,7 @@ const token = Astro.cookies.get("token")?.value;
 
 let tareas = [];
 let grupoId = null;
+let miembros = [];
 
 if (token) {
   try {
@@ -17,14 +18,25 @@ if (token) {
 
     if (grupoId) {
       const result = await query(
-        `SELECT id, title, description, status, created_at 
-         FROM tareas 
-         WHERE grupo_id = $1 
-         ORDER BY created_at DESC`,
-        [grupoId]
+        `SELECT t.id, t.titulo, t.descripcion, t.estado, t.created_at,
+          u.nombre as asignado_nombre
+   FROM tareas t
+   LEFT JOIN usuarios u ON t.asignado_a = u.id
+   WHERE t.grupo_id = $1
+   ORDER BY t.created_at DESC`,
+        [grupoId],
       );
 
       tareas = result.rows;
+
+      // Obtener miembros del grupo
+      const miembrosRes = await query(
+        `SELECT u.id, u.nombre FROM usuarios u
+   INNER JOIN usuarios_grupos ug ON u.id = ug.usuario_id
+   WHERE ug.grupo_id = $1 ORDER BY u.nombre ASC`,
+        [grupoId],
+      );
+      miembros = miembrosRes.rows;
     }
   } catch (e) {
     console.error("Error cargando tareas:", e);
@@ -32,160 +44,256 @@ if (token) {
 }
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Kinvia · Tareas</title>
+    <title>Kinvia · Tareas</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <link
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap"
-    rel="stylesheet"
-  />
-</head>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
 
-<body class="min-h-screen flex flex-col bg-[#faf8ff] text-[#1a1a2e] font-[Nunito]">
-
-<main class="flex-1 overflow-y-auto pb-[90px]">
-
-  <!-- HEADER -->
-  <header class="relative bg-[#6C9BB5] px-6 pt-8 pb-9 overflow-hidden">
-    <div class="absolute w-[360px] h-[360px] rounded-full bg-white/5 -top-[120px] -right-[90px]"></div>
-    <div class="absolute w-[240px] h-[240px] rounded-full bg-white/5 -bottom-[70px] -left-[60px]"></div>
-
-    <div class="relative z-10">
-      <h1 class="text-[1.45rem] font-black text-white">Tareas</h1>
-      <p class="text-[0.88rem] font-semibold text-white/70 mt-1">
-        Gestiona las tareas del grupo
-      </p>
-    </div>
-  </header>
-
-  <div class="p-5 flex flex-col gap-4">
-
-    <!-- CREAR TAREA -->
-    <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5">
-      <h2 class="text-sm font-black mb-3">Crear nueva tarea</h2>
-
-      <form id="form-tarea">
-
-        <input
-          id="tarea-title"
-          placeholder="Título"
-          class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
-          required
-        />
-
-        <textarea
-          id="tarea-desc"
-          placeholder="Descripción"
-          class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"
-        ></textarea>
-
-        <select
-          id="tarea-status"
-          class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
+  <body
+    class="min-h-screen flex flex-col bg-[#faf8ff] text-[#1a1a2e] font-[Nunito]"
+  >
+    <main class="flex-1 overflow-y-auto pb-[90px]">
+      <!-- HEADER -->
+      <header class="relative bg-[#6C9BB5] px-6 pt-8 pb-9 overflow-hidden">
+        <div
+          class="absolute w-[360px] h-[360px] rounded-full bg-white/5 -top-[120px] -right-[90px]"
         >
-          <option value="pendiente">Pendiente</option>
-          <option value="en_curso">En curso</option>
-          <option value="completada">Completada</option>
-        </select>
-
-        <p id="tarea-error" class="text-red-500 text-xs mb-2 hidden"></p>
-
-        <button
-          type="submit"
-          id="btn-crear"
-          class="w-full bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90 disabled:opacity-50"
+        </div>
+        <div
+          class="absolute w-[240px] h-[240px] rounded-full bg-white/5 -bottom-[70px] -left-[60px]"
         >
-          Crear tarea
-        </button>
-      </form>
-    </section>
+        </div>
 
-    <!-- SCRIPT CREAR -->
-    <script>
-      document.getElementById("form-tarea").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const title = document.getElementById("tarea-title").value.trim();
-        const description = document.getElementById("tarea-desc").value.trim();
-        const status = document.getElementById("tarea-status").value;
-
-        const errorEl = document.getElementById("tarea-error");
-        const btn = document.getElementById("btn-crear");
-
-        errorEl.classList.add("hidden");
-
-        if (!title) {
-          errorEl.textContent = "El título es obligatorio";
-          errorEl.classList.remove("hidden");
-          return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = "Guardando...";
-
-        try {
-          const res = await fetch("/api/tareas/crear", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ title, description, status })
-          });
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            throw new Error(data.error || "Error al crear tarea");
-          }
-
-          window.location.reload();
-        } catch (err) {
-          errorEl.textContent = err.message;
-          errorEl.classList.remove("hidden");
-          btn.disabled = false;
-          btn.textContent = "Crear tarea";
-        }
-      });
-    </script>
-
-    <!-- LISTA DE TAREAS -->
-    {
-      tareas.length === 0 ? (
-        <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5 text-center">
-          <p class="text-sm text-gray-500">
-            No hay tareas todavía. Crea la primera!
+        <div class="relative z-10">
+          <h1 class="text-[1.45rem] font-black text-white">Tareas</h1>
+          <p class="text-[0.88rem] font-semibold text-white/70 mt-1">
+            Gestiona las tareas del grupo
           </p>
-        </section>
-      ) : (
-        tareas.map((t) => (
-          <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow px-5">
-            <TaskItem
-              title={t.title}
-              description={t.description}
-              date={new Date(t.created_at).toLocaleDateString("es-ES", {
-                day: "numeric",
-                month: "short"
-              })}
-              status={t.status}
+        </div>
+      </header>
+
+      <div class="p-5 flex flex-col gap-4">
+        <!-- CREAR TAREA -->
+        <section
+          class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5"
+        >
+          <h2 class="text-sm font-black mb-3">Crear nueva tarea</h2>
+
+          <form id="form-tarea">
+            <input
+              id="tarea-title"
+              placeholder="Título"
+              class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
+              required
             />
-          </section>
-        ))
-      )
-    }
 
+            <textarea
+              id="tarea-desc"
+              placeholder="Descripción"
+              class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"
+            ></textarea>
+
+            <select
+              id="tarea-status"
+              class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
+            >
+              <option value="pendiente">Pendiente</option>
+              <option value="en_curso">En curso</option>
+              <option value="completada">Completada</option>
+            </select>
+
+            <select
+              id="tarea-asignado"
+              class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
+            >
+              <option value="">Sin asignar</option>
+              {miembros.map((m) => <option value={m.id}>{m.nombre}</option>)}
+            </select>
+
+            <p id="tarea-error" class="text-red-500 text-xs mb-2 hidden"></p>
+
+            <button
+              type="submit"
+              id="btn-crear"
+              class="w-full bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90 disabled:opacity-50"
+            >
+              Crear tarea
+            </button>
+          </form>
+        </section>
+
+        <!-- SCRIPT CREAR -->
+        <script>
+          document
+            .getElementById("form-tarea")
+            .addEventListener("submit", async (e) => {
+              e.preventDefault();
+
+              const title = document.getElementById("tarea-title").value.trim();
+              const description = document
+                .getElementById("tarea-desc")
+                .value.trim();
+              const status = document.getElementById("tarea-status").value;
+              const asignado_a =
+                document.getElementById("tarea-asignado").value || null;
+
+              const errorEl = document.getElementById("tarea-error");
+              const btn = document.getElementById("btn-crear");
+
+              errorEl.classList.add("hidden");
+
+              if (!title) {
+                errorEl.textContent = "El título es obligatorio";
+                errorEl.classList.remove("hidden");
+                return;
+              }
+
+              btn.disabled = true;
+              btn.textContent = "Guardando...";
+
+              try {
+                const res = await fetch("/api/tareas/crear", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    title,
+                    description,
+                    status,
+                    asignado_a,
+                  }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                  throw new Error(data.error || "Error al crear tarea");
+                }
+
+                window.location.reload();
+              } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove("hidden");
+                btn.disabled = false;
+                btn.textContent = "Crear tarea";
+              }
+            });
+        </script>
+
+        <!-- LISTA DE TAREAS -->
+        {
+          tareas.length === 0 ? (
+            <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5 text-center">
+              <p class="text-sm text-gray-500">
+                No hay tareas todavía. Crea la primera!
+              </p>
+            </section>
+          ) : (
+            tareas.map((t) => (
+              <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow px-5">
+                <TaskItem
+                  id={t.id}
+                  title={t.titulo}
+                  description={t.descripcion}
+                  date={new Date(t.created_at).toLocaleDateString("es-ES", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                  status={t.estado}
+                  asignado={t.asignado_nombre}
+                />
+              </section>
+            ))
+          )
+        }
+        <!-- Modal editar tarea -->
+<div id="modal-editar-tarea" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-5">
+  <div class="bg-white rounded-2xl p-5 w-full max-w-md">
+    <h3 class="font-black text-sm mb-3">Editar tarea</h3>
+    <form id="form-editar-tarea">
+      <input type="hidden" id="editar-tarea-id" />
+      <input type="text" id="editar-tarea-titulo" placeholder="Título"
+        class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm" required />
+      <textarea id="editar-tarea-desc" placeholder="Descripción"
+        class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"></textarea>
+      <select id="editar-tarea-status" class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm">
+        <option value="pendiente">Pendiente</option>
+        <option value="en_curso">En curso</option>
+        <option value="completada">Completada</option>
+      </select>
+      <p id="editar-tarea-error" class="text-red-500 text-xs mb-2 hidden"></p>
+      <div class="flex gap-3">
+        <button type="button" id="btn-cancelar-editar-tarea"
+          class="flex-1 border border-[#e8e0f5] text-gray-600 font-extrabold rounded-xl py-3 text-sm hover:bg-gray-50">
+          Cancelar
+        </button>
+        <button type="submit" id="btn-guardar-editar-tarea"
+          class="flex-1 bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90 disabled:opacity-50">
+          Guardar
+        </button>
+      </div>
+    </form>
   </div>
+</div>
 
-</main>
+<script>
+ 
 
-<BottomNav active="tareas" />
+  
+  // Cerrar modal
+  document.getElementById("btn-cancelar-editar-tarea").addEventListener("click", () => {
+    const modal = document.getElementById("modal-editar-tarea");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  });
 
-</body>
+  // Guardar edición
+  document.getElementById("form-editar-tarea").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("editar-tarea-id").value;
+    const title = document.getElementById("editar-tarea-titulo").value.trim();
+    const description = document.getElementById("editar-tarea-desc").value.trim();
+    const status = document.getElementById("editar-tarea-status").value;
+    const errorEl = document.getElementById("editar-tarea-error");
+    const btn = document.getElementById("btn-guardar-editar-tarea");
+
+    errorEl.classList.add("hidden");
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+
+    try {
+      const res = await fetch("/api/tareas/editar", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: Number(id), title, description, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al editar");
+      window.location.reload();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.classList.remove("hidden");
+      btn.disabled = false;
+      btn.textContent = "Guardar";
+    }
+  });
+</script>
+      </div>
+    </main>
+
+    <BottomNav active="tareas" />
+  </body>
 </html>

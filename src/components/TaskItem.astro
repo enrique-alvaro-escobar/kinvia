@@ -1,11 +1,13 @@
 ---
 export interface Props {
+  id: number;
   title: string;
   description: string;
   date: string;
   status: "en_curso" | "pendiente" | "completada";
+  asignado?: string;
 }
-const { title, description, date, status } = Astro.props;
+const { id,title, description, date, status, asignado } = Astro.props;
 
 const statusLabel: Record<string, string> = {
   en_curso:   "En curso",
@@ -14,107 +16,203 @@ const statusLabel: Record<string, string> = {
 };
 ---
 
-<div class="task-item">
-  <div class={`task-check check-${status}`}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      {status === "completada"
-        ? <polyline points="20 6 9 17 4 12" />
-        : <rect x="3" y="3" width="18" height="18" rx="4" />
-      }
-    </svg>
+<div class="task-item" data-tarea-id={id} data-estado={status}>
+
+  <div class="task-top">
+    <div class={`task-check check-${status}`}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
+        {status === "completada"
+          ? <polyline points="20 6 9 17 4 12" />
+          : <rect x="3" y="3" width="18" height="18" rx="4" />
+        }
+      </svg>
+    </div>
+
+    <div class="task-main">
+      <div class="task-header-row">
+        <span class={`task-title ${status === "completada" ? "done" : ""}`}>{title}</span>
+        <span class={`task-badge badge-${status}`}>{statusLabel[status]}</span>
+      </div>
+      {description && <p class="task-desc">{description}</p>}
+    </div>
+
+    <div class="task-actions">
+      <button type="button" class="btn-editar-tarea action-btn edit-btn"
+        data-id={id} data-titulo={title} data-descripcion={description}
+        data-status={status} data-asignado={asignado || ""}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          <path d="m15 5 4 4"/>
+        </svg>
+      </button>
+      <button type="button" class="btn-eliminar-tarea action-btn delete-btn" data-id={id}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/>
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          <line x1="10" x2="10" y1="11" y2="17"/>
+          <line x1="14" x2="14" y1="11" y2="17"/>
+        </svg>
+      </button>
+    </div>
   </div>
-  <div class="task-info">
-    <span class={`task-title ${status === "completada" ? "done" : ""}`}>{title}</span>
-    <span class="task-desc">{description}</span>
-    <span class="task-date">{date}</span>
+
+  <div class="task-footer">
+    <span class="task-meta">{asignado ? `👤 ${asignado}` : "Sin asignar"}</span>
+    <span class="task-meta">{date}</span>
   </div>
-  <span class={`task-badge badge-${status}`}>{statusLabel[status]}</span>
+
 </div>
 
 <style>
   .task-item {
-    display: flex;
-    align-items: center;
-    gap: 13px;
-    padding: 13px 0;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    border-radius: 0;
+    padding: 14px 0 10px;
+    border-bottom: 1px solid var(--border, #e8e0f5);
   }
   .task-item:last-child { border-bottom: none; }
-  .task-item:hover {
-    background: var(--blue-bg-soft);
-    border-radius: 10px;
-    padding-left: 10px;
-    padding-right: 10px;
-    margin: 0 -10px;
-    border-bottom-color: transparent;
-  }
 
-  .task-check {
-    flex-shrink: 0;
-    width: 22px;
-    height: 22px;
-    transition: color 0.2s;
-  }
-  .check-en_curso  { color: var(--blue); }
-  .check-pendiente { color: var(--text-muted); }
-  .check-completada { color: var(--blue-dark); }
-  .task-check svg  { width: 22px; height: 22px; }
-
-  .task-info {
-    flex: 1;
+  .task-top {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
   }
+
+  .task-main { flex: 1; min-width: 0; }
+
+  .task-header-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .check-en_curso   { color: var(--blue, #6C9BB5); }
+.check-pendiente  { color: var(--text-muted, #a0a0bb); }
+.check-completada { color: #4a7590; }
+
   .task-title {
     font-size: 0.92rem;
     font-weight: 800;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: var(--text-primary, #1a1a2e);
   }
   .task-title.done {
     text-decoration: line-through;
-    color: var(--text-muted);
-  }
-  .task-desc {
-    font-size: 0.77rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
-  .task-date {
-    font-size: 0.70rem;
-    color: var(--text-muted);
-    font-weight: 700;
-    margin-top: 1px;
+    color: var(--text-muted, #a0a0bb);
   }
 
-  /* Badges */
+  .task-desc {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #6b6b8a);
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .task-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border, #e8e0f5);
+  }
+
+  .task-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted, #a0a0bb);
+    font-weight: 700;
+  }
+
+  .task-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .action-btn {
+    padding: 6px;
+    border-radius: 8px;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .edit-btn  { color: #6C9BB5; }
+  .edit-btn:hover  { background: rgba(108,155,181,0.1); }
+  .delete-btn { color: #ef4444; }
+  .delete-btn:hover { background: #fef2f2; }
+
   .task-badge {
     flex-shrink: 0;
     font-size: 0.68rem;
     font-weight: 800;
-    padding: 4px 11px;
+    padding: 3px 10px;
     border-radius: 20px;
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
-  .badge-en_curso {
-    background: var(--text-primary);
-    color: #fff;
-  }
-  .badge-pendiente {
-    background: #f0edf8;
-    color: var(--text-secondary);
-    border: 1px solid var(--border);
-  }
-  .badge-completada {
-    background: #d4eef7;
-    color: var(--blue-darker);
-  }
+  .badge-en_curso   { background: #1a1a2e; color: #fff; }
+  .badge-pendiente  { background: #f0edf8; color: #6b6b8a; border: 1px solid #e8e0f5; }
+  .badge-completada { background: #d4eef7; color: #4a7590; }
 </style>
+<script>
+  document.querySelectorAll(".btn-eliminar-tarea").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("¿Eliminar esta tarea?")) return;
+      const id = btn.dataset.id;
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/tareas/eliminar", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: Number(id) }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Error al eliminar");
+        }
+        window.location.reload();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll(".btn-editar-tarea").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.getElementById("editar-tarea-id").value = btn.dataset.id;
+      document.getElementById("editar-tarea-titulo").value = btn.dataset.titulo;
+      document.getElementById("editar-tarea-desc").value = btn.dataset.descripcion;
+      document.getElementById("editar-tarea-status").value = btn.dataset.status;
+      document.getElementById("editar-tarea-error").classList.add("hidden");
+      const modal = document.getElementById("modal-editar-tarea");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    });
+  });
+
+  document.querySelectorAll(".task-check").forEach((checkEl) => {
+    checkEl.addEventListener("click", async () => {
+      const item = checkEl.closest("[data-tarea-id]");
+      const id = item?.dataset.tareaId;
+      if (!id) return;
+
+      const estadoActual = item.dataset.estado;
+      if (estadoActual === "completada") return;
+
+      try {
+        const res = await fetch("/api/tareas/estado", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: Number(id), estado: "completada" }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error);
+        }
+        window.location.reload();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+</script>
