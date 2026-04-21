@@ -9,7 +9,7 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/netlify": "^7.0.7",
+    "@astrojs/netlify": "^6.6.5",
     "@tailwindcss/vite": "^4.2.1",
     "astro": "^5.17.1",
     "bcryptjs": "^3.0.3",
