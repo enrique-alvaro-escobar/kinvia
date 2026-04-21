@@ -8,5 +8,6 @@ export default defineConfig({
   adapter: netlify(),
   vite: {
     plugins: [tailwindcss()]
-  }
+  },
+  publicDir: './public'
 });
