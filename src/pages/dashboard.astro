@@ -333,6 +333,47 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
         </div>
       </section>
 
+      <!-- ÚLTIMAS NOTAS -->
+      <section class="card" style="animation-delay: 0.20s">
+        <div class="card-header">
+          <div class="card-titles">
+            <h2 class="card-title">Últimas notas</h2>
+            <p class="card-sub">Notas recientes del grupo</p>
+          </div>
+          <a href="/notas" class="card-arrow" aria-label="Ver notas">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </a>
+        </div>
+        <div class="card-body">
+          {
+            notas.length > 0 ? (
+              notas.map((n) => (
+                <div class="nota-preview">
+                  <div class="nota-preview-dot" />
+                  <div>
+                    <p class="nota-preview-titulo">{n.titulo}</p>
+                    <p class="nota-preview-meta">
+                      {n.autor} · {n.fecha}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p class="empty-state">Todavía no hay notas en el grupo.</p>
+            )
+          }
+        </div>
+      </section>
+
       <!-- GRUPO FAMILIAR -->
       <section class="card" style="animation-delay: 0.15s">
         <div class="card-header">
@@ -411,47 +452,7 @@ const iconNote = `<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2
           }
         </div>
       </section>
-
-      <!-- ÚLTIMAS NOTAS -->
-      <section class="card" style="animation-delay: 0.20s">
-        <div class="card-header">
-          <div class="card-titles">
-            <h2 class="card-title">Últimas notas</h2>
-            <p class="card-sub">Notas recientes del grupo</p>
-          </div>
-          <a href="/notas" class="card-arrow" aria-label="Ver notas">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </a>
-        </div>
-        <div class="card-body">
-          {
-            notas.length > 0 ? (
-              notas.map((n) => (
-                <div class="nota-preview">
-                  <div class="nota-preview-dot" />
-                  <div>
-                    <p class="nota-preview-titulo">{n.titulo}</p>
-                    <p class="nota-preview-meta">
-                      {n.autor} · {n.fecha}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p class="empty-state">Todavía no hay notas en el grupo.</p>
-            )
-          }
-        </div>
-      </section>
+      
     </div>
   </main>
 

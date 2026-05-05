@@ -7,6 +7,7 @@ import { query } from "../lib/db.js";
 const token = Astro.cookies.get("token")?.value;
 let notas = [];
 let grupoId = null;
+let grupoNombre = "el grupo";
 
 if (token) {
   try {
@@ -14,20 +15,49 @@ if (token) {
     grupoId = payload.grupo_id;
 
     if (grupoId) {
-      const result = await query(
-        `SELECT n.id, n.titulo, n.contenido, n.created_at, u.nombre as creado_por_nombre 
-         FROM notas n 
-         LEFT JOIN usuarios u ON n.creado_por = u.id 
-         WHERE n.grupo_id = $1 
-         ORDER BY n.created_at DESC`,
+      // Nombre del grupo (para el header)
+      const grupoRes = await query(
+        `SELECT nombre FROM grupos WHERE id = $1`,
         [grupoId],
       );
-      notas = result.rows;
+      if (grupoRes.rows[0]) grupoNombre = grupoRes.rows[0].nombre;
+
+      // NOTA: cuando hagas el back, añade `n.categoria` al SELECT.
+      // De momento se hace fallback a 'general' en el .map de abajo.
+      const result = await query(
+  `SELECT n.id, n.titulo, n.contenido, n.categoria, n.created_at, u.nombre as creado_por_nombre 
+   FROM notas n 
+   LEFT JOIN usuarios u ON n.creado_por = u.id 
+   WHERE n.grupo_id = $1 
+   ORDER BY n.created_at DESC`,
+  [grupoId],
+);
+      notas = result.rows.map((n) => ({
+        ...n,
+        categoria: n.categoria || "general",
+      }));
     }
   } catch (e) {
     console.error("Error al cargar notas:", e);
   }
 }
+
+// Configuracion de categorias (orden = orden de los chips)
+const categorias = [
+  { key: "general",        label: "General",        bg: "#F1EFE8", color: "#444441" },
+  { key: "salud",          label: "Salud",          bg: "#FCEBEB", color: "#791F1F" },
+  { key: "medicos",        label: "Médicos",        bg: "#E6F1FB", color: "#0C447C" },
+  { key: "emergencia",     label: "Emergencia",     bg: "#FAEEDA", color: "#854F0B" },
+  { key: "administrativo", label: "Administrativo", bg: "#F1EFE8", color: "#444441" },
+  { key: "rutinas",        label: "Rutinas",        bg: "#EAF3DE", color: "#27500A" },
+];
+
+const contadores = Object.fromEntries(
+  categorias.map((c) => [c.key, notas.filter((n) => n.categoria === c.key).length])
+);
+
+const getCategoria = (key) =>
+  categorias.find((c) => c.key === key) || categorias[0];
 ---
 
 <!doctype html>
@@ -35,12 +65,10 @@ if (token) {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Kinvia · Notas</title>
+    <title>Kinvia · Información</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
     <link
       href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
@@ -51,7 +79,6 @@ if (token) {
   >
     <main class="flex-1 overflow-y-auto pb-[90px]">
       <!-- HEADER -->
-
       <header class="relative bg-[#6C9BB5] px-6 pt-8 pb-9 overflow-hidden">
         <div
           class="absolute w-[360px] h-[360px] rounded-full bg-white/5 -top-[120px] -right-[90px]"
@@ -64,9 +91,15 @@ if (token) {
 
         <div class="relative z-10 flex items-center justify-between">
           <div>
-            <h1 class="text-[1.45rem] font-black text-white">Notas</h1>
-            <p class="text-[0.88rem] font-semibold text-white/70 mt-1">
-              Notas compartidas del grupo
+            <p
+              class="text-[0.65rem] font-extrabold text-white/70 uppercase tracking-wider mb-1"
+            >
+              Información compartida
+            </p>
+            <h1 class="text-[1.45rem] font-black text-white">{grupoNombre}</h1>
+            <p class="text-[0.85rem] font-semibold text-white/70 mt-1">
+              {notas.length}
+              {notas.length === 1 ? "ficha" : "fichas"} · Datos importantes del grupo
             </p>
           </div>
           <button
@@ -90,338 +123,465 @@ if (token) {
           </button>
         </div>
       </header>
+
       <!-- CONTENT -->
-
       <div class="p-5 flex flex-col gap-4">
-        <!-- CREAR NOTA -->
-
-        <section
-          class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5"
+        <!-- FILTRO CATEGORIAS + BOTON ANYADIR -->
+        <div
+          class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
         >
-          <h2 class="text-sm font-black mb-3">Crear nueva nota</h2>
-
-          <form id="form-nota">
-            <input
-              type="text"
-              id="nota-titulo"
-              placeholder="Titulo"
-              class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
-            />
-
-            <textarea
-              id="nota-contenido"
-              placeholder="Escribe una nota..."
-              class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"
-              required></textarea>
-
-            <p id="nota-error" class="text-red-500 text-xs mb-2 hidden"></p>
-
+          <div
+            class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1"
+            id="chips-container"
+          >
             <button
-              type="submit"
-              id="btn-crear-nota"
-              class="w-full bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90 disabled:opacity-50"
+              type="button"
+              data-categoria="all"
+              class="chip chip-active flex-shrink-0 text-xs font-extrabold px-3 py-1.5 rounded-full transition-colors"
             >
-              Crear nota
+              Todas · {notas.length}
             </button>
-          </form>
-        </section>
+            {
+              categorias
+                .filter((c) => contadores[c.key] > 0)
+                .map((c) => (
+                  <button
+                    type="button"
+                    data-categoria={c.key}
+                    class="chip flex-shrink-0 text-xs font-extrabold px-3 py-1.5 rounded-full bg-white border border-[#e8e0f5] transition-colors"
+                    style={`color: ${c.color};`}
+                  >
+                    {c.label} · {contadores[c.key]}
+                  </button>
+                ))
+            }
+          </div>
 
-        <script>
-          document
-            .getElementById("form-nota")
-            .addEventListener("submit", async (e) => {
-              e.preventDefault();
+          <button
+            type="button"
+            id="btn-abrir-crear"
+            class="flex-shrink-0 flex items-center justify-center gap-2 bg-[#6C9BB5] text-white font-extrabold rounded-xl px-4 py-2.5 text-xs hover:opacity-90 whitespace-nowrap"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              class="w-3.5 h-3.5"
+            >
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+            Añadir información
+          </button>
+        </div>
 
-              const titulo = document
-                .getElementById("nota-titulo")
-                .value.trim();
-              const contenido = document
-                .getElementById("nota-contenido")
-                .value.trim();
-              const errorEl = document.getElementById("nota-error");
-              const btnCrear = document.getElementById("btn-crear-nota");
-
-              errorEl.classList.add("hidden");
-
-              if (!contenido) {
-                errorEl.textContent = "El contenido no puede estar vacio.";
-                errorEl.classList.remove("hidden");
-                return;
-              }
-
-              btnCrear.disabled = true;
-              btnCrear.textContent = "Guardando...";
-
-              try {
-                const res = await fetch("/api/notas/crear", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ titulo, contenido }),
-                });
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                  throw new Error(data.error || "Error al crear la nota");
-                }
-
-                // Recargar la página para mostrar la nueva nota
-                window.location.reload();
-              } catch (error) {
-                errorEl.textContent = error.message;
-                errorEl.classList.remove("hidden");
-                btnCrear.disabled = false;
-                btnCrear.textContent = "Crear nota";
-              }
-            });
-        </script>
-
-        <!-- LISTA DE NOTAS -->
-
+        <!-- LISTA DE FICHAS -->
         {
           notas.length === 0 ? (
-            <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5 text-center">
-              <p class="text-sm text-gray-500">
-                No hay notas todavia. Crea la primera!
+            <section class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-8 text-center">
+              <p class="text-sm text-gray-500 mb-2 font-semibold">
+                No hay informacion todavia
+              </p>
+              <p class="text-xs text-gray-400">
+                Anyade la primera ficha para empezar a compartir datos importantes.
               </p>
             </section>
           ) : (
-            notas.map((nota) => (
-              <section
-                class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-5"
-                data-nota-id={nota.id}
-              >
-                <div class="flex justify-between items-start gap-3">
-                  <div class="flex-1">
-                    {nota.titulo && (
-                      <p class="font-extrabold text-sm mb-1 nota-titulo">
-                        {nota.titulo}
-                      </p>
-                    )}
-                    <p class="text-sm text-gray-500 whitespace-pre-wrap nota-contenido">
-                      {nota.contenido}
-                    </p>
-                  </div>
-                  <div class="flex gap-2">
-                    <button
-                      type="button"
-                      class="btn-editar p-2 text-[#6C9BB5] hover:bg-[#6C9BB5]/10 rounded-lg transition-colors"
-                      data-id={nota.id}
-                      data-titulo={nota.titulo || ""}
-                      data-contenido={nota.contenido}
-                      title="Editar nota"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="notas-grid">
+              {notas.map((nota) => {
+                const cat = getCategoria(nota.categoria);
+                return (
+                  <section
+                    class="bg-white rounded-2xl border border-[#e8e0f5] shadow p-4 nota-card"
+                    data-nota-id={nota.id}
+                    data-nota-categoria={nota.categoria}
+                  >
+                    <div class="flex items-center justify-between mb-2 gap-2">
+                      <span
+                        class="text-[0.65rem] font-extrabold px-2.5 py-1 rounded-full whitespace-nowrap"
+                        style={`background:${cat.bg}; color:${cat.color};`}
                       >
-                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        <path d="m15 5 4 4" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-eliminar p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      data-id={nota.id}
-                      title="Eliminar nota"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                        <line x1="10" x2="10" y1="11" y2="17" />
-                        <line x1="14" x2="14" y1="11" y2="17" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div class="flex justify-between items-center mt-3 pt-3 border-t border-[#e8e0f5]">
-                  <p class="text-xs text-gray-400">
-                    {nota.creado_por_nombre || "Usuario"}
-                  </p>
-                  <p class="text-xs text-gray-400">
-                    {new Date(nota.created_at).toLocaleDateString("es-ES", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </p>
-                </div>
-              </section>
-            ))
+                        {cat.label}
+                      </span>
+                      <span class="text-[0.65rem] text-gray-400 font-semibold">
+                        {nota.creado_por_nombre || "Usuario"} ·{" "}
+                        {new Date(nota.created_at).toLocaleDateString("es-ES", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </span>
+                    </div>
+
+                    <div class="flex justify-between items-start gap-3">
+                      <div class="flex-1 min-w-0">
+                        {nota.titulo && (
+                          <p class="font-extrabold text-sm mb-1">
+                            {nota.titulo}
+                          </p>
+                        )}
+                        <p class="text-sm text-gray-500 whitespace-pre-wrap">
+                          {nota.contenido}
+                        </p>
+                      </div>
+                      <div class="flex flex-col gap-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          class="btn-editar p-1.5 text-[#6C9BB5] hover:bg-[#6C9BB5]/10 rounded-lg transition-colors"
+                          data-id={nota.id}
+                          data-titulo={nota.titulo || ""}
+                          data-contenido={nota.contenido}
+                          data-categoria={nota.categoria}
+                          title="Editar"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            <path d="m15 5 4 4" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-eliminar p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          data-id={nota.id}
+                          title="Eliminar"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            <line x1="10" x2="10" y1="11" y2="17" />
+                            <line x1="14" x2="14" y1="11" y2="17" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
           )
         }
 
-        <!-- Modal de edicion -->
+        <!-- MODAL CREAR -->
         <div
-          id="modal-editar"
+          id="modal-crear"
           class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-5"
         >
           <div class="bg-white rounded-2xl p-5 w-full max-w-md">
-            <h3 class="font-black text-sm mb-3">Editar nota</h3>
-            <form id="form-editar">
-              <input type="hidden" id="editar-id" />
+            <h3 class="font-black text-sm mb-3">Añadir información</h3>
+            <form id="form-crear">
+              <label class="block text-xs font-extrabold text-gray-600 mb-1"
+                >Categoría</label
+              >
+              <select
+                id="crear-categoria"
+                class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm bg-white"
+              >
+                {categorias.map((c) => <option value={c.key}>{c.label}</option>)}
+              </select>
+
+              <label class="block text-xs font-extrabold text-gray-600 mb-1"
+                >Título</label
+              >
               <input
                 type="text"
-                id="editar-titulo"
-                placeholder="Titulo"
+                id="crear-titulo"
+                placeholder="Ej: Sintrom 5 mg"
                 class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
               />
+
+              <label class="block text-xs font-extrabold text-gray-600 mb-1"
+                >Contenido</label
+              >
               <textarea
-                id="editar-contenido"
-                placeholder="Contenido..."
+                id="crear-contenido"
+                placeholder="Escribe la información..."
                 class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"
                 required></textarea>
-              <p id="editar-error" class="text-red-500 text-xs mb-2 hidden"></p>
+
+              <p id="crear-error" class="text-red-500 text-xs mb-2 hidden"></p>
+
               <div class="flex gap-3">
                 <button
                   type="button"
-                  id="btn-cancelar-editar"
+                  id="btn-cancelar-crear"
                   class="flex-1 border border-[#e8e0f5] text-gray-600 font-extrabold rounded-xl py-3 text-sm hover:bg-gray-50"
+                  >Cancelar</button
                 >
-                  Cancelar
-                </button>
                 <button
                   type="submit"
-                  id="btn-guardar-editar"
+                  id="btn-guardar-crear"
                   class="flex-1 bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90 disabled:opacity-50"
+                  >Guardar</button
                 >
-                  Guardar
-                </button>
               </div>
             </form>
           </div>
         </div>
 
-        <script>
-          // Eliminar nota
-          document.querySelectorAll(".btn-eliminar").forEach((btn) => {
-            btn.addEventListener("click", async () => {
-              if (!confirm("¿Estas seguro de que quieres eliminar esta nota?"))
-                return;
+        <!-- MODAL EDITAR -->
+        <div
+          id="modal-editar"
+          class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-5"
+        >
+          <div class="bg-white rounded-2xl p-5 w-full max-w-md">
+            <h3 class="font-black text-sm mb-3">Editar información</h3>
+            <form id="form-editar">
+              <input type="hidden" id="editar-id" />
 
-              const id = btn.dataset.id;
-              btn.disabled = true;
+              <label class="block text-xs font-extrabold text-gray-600 mb-1"
+                >Categoría</label
+              >
+              <select
+                id="editar-categoria"
+                class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm bg-white"
+              >
+                {categorias.map((c) => <option value={c.key}>{c.label}</option>)}
+              </select>
 
-              try {
-                const res = await fetch("/api/notas/eliminar", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ id: Number(id) }),
-                });
+              <label class="block text-xs font-extrabold text-gray-600 mb-1"
+                >Título</label
+              >
+              <input
+                type="text"
+                id="editar-titulo"
+                placeholder="Título"
+                class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm"
+              />
 
-                if (!res.ok) {
-                  const data = await res.json();
-                  throw new Error(data.error || "Error al eliminar");
-                }
+              <label class="block text-xs font-extrabold text-gray-600 mb-1"
+                >Contenido</label
+              >
+              <textarea
+                id="editar-contenido"
+                placeholder="Contenido..."
+                class="w-full border border-[#e8e0f5] rounded-xl p-3 mb-3 text-sm h-24 resize-none"
+                required></textarea>
 
-                window.location.reload();
-              } catch (error) {
-                alert(error.message);
-                btn.disabled = false;
-              }
-            });
-          });
+              <p id="editar-error" class="text-red-500 text-xs mb-2 hidden"></p>
 
-          // Editar nota - abrir modal
-          document.querySelectorAll(".btn-editar").forEach((btn) => {
-            btn.addEventListener("click", () => {
-              const modal = document.getElementById("modal-editar");
-              document.getElementById("editar-id").value = btn.dataset.id;
-              document.getElementById("editar-titulo").value =
-                btn.dataset.titulo;
-              document.getElementById("editar-contenido").value =
-                btn.dataset.contenido;
-              document.getElementById("editar-error").classList.add("hidden");
-              modal.classList.remove("hidden");
-              modal.classList.add("flex");
-            });
-          });
-
-          // Cerrar modal
-          document
-            .getElementById("btn-cancelar-editar")
-            .addEventListener("click", () => {
-              const modal = document.getElementById("modal-editar");
-              modal.classList.add("hidden");
-              modal.classList.remove("flex");
-            });
-
-          // Guardar edicion
-          document
-            .getElementById("form-editar")
-            .addEventListener("submit", async (e) => {
-              e.preventDefault();
-
-              const id = document.getElementById("editar-id").value;
-              const titulo = document
-                .getElementById("editar-titulo")
-                .value.trim();
-              const contenido = document
-                .getElementById("editar-contenido")
-                .value.trim();
-              const errorEl = document.getElementById("editar-error");
-              const btnGuardar = document.getElementById("btn-guardar-editar");
-
-              errorEl.classList.add("hidden");
-
-              if (!contenido) {
-                errorEl.textContent = "El contenido no puede estar vacio.";
-                errorEl.classList.remove("hidden");
-                return;
-              }
-
-              btnGuardar.disabled = true;
-              btnGuardar.textContent = "Guardando...";
-
-              try {
-                const res = await fetch("/api/notas/editar", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ id: Number(id), titulo, contenido }),
-                });
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                  throw new Error(data.error || "Error al editar");
-                }
-
-                window.location.reload();
-              } catch (error) {
-                errorEl.textContent = error.message;
-                errorEl.classList.remove("hidden");
-                btnGuardar.disabled = false;
-                btnGuardar.textContent = "Guardar";
-              }
-            });
-
-          document
-            .getElementById("logoutBtn")
-            .addEventListener("click", async () => {
-              await fetch("/api/logout", { method: "POST" });
-              window.location.href = "/login";
-            });
-        </script>
+              <div class="flex gap-3">
+                <button
+                  type="button"
+                  id="btn-cancelar-editar"
+                  class="flex-1 border border-[#e8e0f5] text-gray-600 font-extrabold rounded-xl py-3 text-sm hover:bg-gray-50"
+                  >Cancelar</button
+                >
+                <button
+                  type="submit"
+                  id="btn-guardar-editar"
+                  class="flex-1 bg-[#6C9BB5] text-white font-extrabold rounded-xl py-3 text-sm hover:opacity-90 disabled:opacity-50"
+                  >Guardar</button
+                >
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </main>
 
     <BottomNav active="notas" />
+
+    <style>
+      .chip-active {
+        background-color: #6c9bb5 !important;
+        color: white !important;
+        border-color: #6c9bb5 !important;
+      }
+    </style>
+
+    <script>
+      // === FILTRO POR CATEGORIA ===
+      const chips = document.querySelectorAll(".chip");
+      chips.forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const cat = chip.dataset.categoria;
+          chips.forEach((c) => c.classList.remove("chip-active"));
+          chip.classList.add("chip-active");
+          document.querySelectorAll(".nota-card").forEach((card) => {
+            if (cat === "all" || card.dataset.notaCategoria === cat) {
+              card.style.display = "";
+            } else {
+              card.style.display = "none";
+            }
+          });
+        });
+      });
+
+      // === ABRIR / CERRAR MODAL CREAR ===
+      const modalCrear = document.getElementById("modal-crear");
+      document
+        .getElementById("btn-abrir-crear")
+        .addEventListener("click", () => {
+          document.getElementById("crear-titulo").value = "";
+          document.getElementById("crear-contenido").value = "";
+          document.getElementById("crear-categoria").value = "general";
+          document.getElementById("crear-error").classList.add("hidden");
+          modalCrear.classList.remove("hidden");
+          modalCrear.classList.add("flex");
+        });
+      document
+        .getElementById("btn-cancelar-crear")
+        .addEventListener("click", () => {
+          modalCrear.classList.add("hidden");
+          modalCrear.classList.remove("flex");
+        });
+
+      // === SUBMIT CREAR ===
+      document
+        .getElementById("form-crear")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const titulo = document.getElementById("crear-titulo").value.trim();
+          const contenido = document
+            .getElementById("crear-contenido")
+            .value.trim();
+          const categoria = document.getElementById("crear-categoria").value;
+          const errorEl = document.getElementById("crear-error");
+          const btn = document.getElementById("btn-guardar-crear");
+          errorEl.classList.add("hidden");
+
+          if (!contenido) {
+            errorEl.textContent = "El contenido no puede estar vacio.";
+            errorEl.classList.remove("hidden");
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = "Guardando...";
+
+          try {
+            const res = await fetch("/api/notas/crear", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ titulo, contenido, categoria }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al crear");
+            window.location.reload();
+          } catch (error) {
+            errorEl.textContent = error.message;
+            errorEl.classList.remove("hidden");
+            btn.disabled = false;
+            btn.textContent = "Guardar";
+          }
+        });
+
+      // === ELIMINAR ===
+      document.querySelectorAll(".btn-eliminar").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("¿Estas seguro de que quieres eliminar esta ficha?"))
+            return;
+          const id = btn.dataset.id;
+          btn.disabled = true;
+          try {
+            const res = await fetch("/api/notas/eliminar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: Number(id) }),
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.error || "Error al eliminar");
+            }
+            window.location.reload();
+          } catch (error) {
+            alert(error.message);
+            btn.disabled = false;
+          }
+        });
+      });
+
+      // === ABRIR MODAL EDITAR ===
+      const modalEditar = document.getElementById("modal-editar");
+      document.querySelectorAll(".btn-editar").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.getElementById("editar-id").value = btn.dataset.id;
+          document.getElementById("editar-titulo").value = btn.dataset.titulo;
+          document.getElementById("editar-contenido").value =
+            btn.dataset.contenido;
+          document.getElementById("editar-categoria").value =
+            btn.dataset.categoria || "general";
+          document.getElementById("editar-error").classList.add("hidden");
+          modalEditar.classList.remove("hidden");
+          modalEditar.classList.add("flex");
+        });
+      });
+      document
+        .getElementById("btn-cancelar-editar")
+        .addEventListener("click", () => {
+          modalEditar.classList.add("hidden");
+          modalEditar.classList.remove("flex");
+        });
+
+      // === SUBMIT EDITAR ===
+      document
+        .getElementById("form-editar")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const id = document.getElementById("editar-id").value;
+          const titulo = document.getElementById("editar-titulo").value.trim();
+          const contenido = document
+            .getElementById("editar-contenido")
+            .value.trim();
+          const categoria = document.getElementById("editar-categoria").value;
+          const errorEl = document.getElementById("editar-error");
+          const btn = document.getElementById("btn-guardar-editar");
+          errorEl.classList.add("hidden");
+
+          if (!contenido) {
+            errorEl.textContent = "El contenido no puede estar vacio.";
+            errorEl.classList.remove("hidden");
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = "Guardando...";
+
+          try {
+            const res = await fetch("/api/notas/editar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: Number(id), titulo, contenido, categoria }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al editar");
+            window.location.reload();
+          } catch (error) {
+            errorEl.textContent = error.message;
+            errorEl.classList.remove("hidden");
+            btn.disabled = false;
+            btn.textContent = "Guardar";
+          }
+        });
+
+      // === LOGOUT ===
+      document
+        .getElementById("logoutBtn")
+        .addEventListener("click", async () => {
+          await fetch("/api/logout", { method: "POST" });
+          window.location.href = "/login";
+        });
+    </script>
   </body>
 </html>

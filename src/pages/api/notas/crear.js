@@ -1,5 +1,7 @@
 import { query } from '../../../lib/db.js';
 
+const CATEGORIAS_VALIDAS = ['general', 'salud', 'medicos', 'emergencia', 'administrativo', 'rutinas'];
+
 export async function POST({ request, cookies }) {
   try {
     console.log('[v0] Iniciando creacion de nota');
@@ -25,7 +27,7 @@ export async function POST({ request, cookies }) {
 
     const body = await request.json();
     console.log('[v0] Body recibido:', body);
-    const { titulo, contenido } = body;
+    const { titulo, contenido, categoria } = body;
 
     if (!contenido || contenido.trim().length < 1) {
       return new Response(JSON.stringify({ error: 'El contenido de la nota no puede estar vacío.' }), { status: 400 });
@@ -33,12 +35,14 @@ export async function POST({ request, cookies }) {
 
     const tituloLimpio = titulo ? titulo.trim() : 'Sin titulo';
     const contenidoLimpio = contenido.trim();
+    const categoriaLimpia = CATEGORIAS_VALIDAS.includes(categoria) ? categoria : 'general';
+
 
     // Crear la nota
     const notaRes = await query(
-      'INSERT INTO notas (titulo, contenido, grupo_id, creado_por) VALUES ($1, $2, $3, $4) RETURNING id, titulo, contenido, created_at',
-      [tituloLimpio, contenidoLimpio, grupo_id, usuario_id]
-    );
+  'INSERT INTO notas (titulo, contenido, categoria, grupo_id, creado_por) VALUES ($1, $2, $3, $4, $5) RETURNING id, titulo, contenido, categoria, created_at',
+  [tituloLimpio, contenidoLimpio, categoriaLimpia, grupo_id, usuario_id]
+);
     const nota = notaRes.rows[0];
 
     return new Response(JSON.stringify({

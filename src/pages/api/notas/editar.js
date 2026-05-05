@@ -1,5 +1,8 @@
 import { query } from '../../../lib/db.js';
 
+const CATEGORIAS_VALIDAS = ['general', 'salud', 'medicos', 'emergencia', 'administrativo', 'rutinas'];
+
+
 export async function POST({ request, cookies }) {
   try {
     const token = cookies.get('token')?.value;
@@ -21,7 +24,7 @@ export async function POST({ request, cookies }) {
       return new Response(JSON.stringify({ error: 'No perteneces a ningún grupo.' }), { status: 400 });
     }
 
-    const { id, titulo, contenido } = await request.json();
+    const { id, titulo, contenido, categoria } = await request.json();
 
     if (!id) {
       return new Response(JSON.stringify({ error: 'ID de nota requerido.' }), { status: 400 });
@@ -43,12 +46,14 @@ export async function POST({ request, cookies }) {
 
     const tituloLimpio = titulo ? titulo.trim() : 'Sin titulo';
     const contenidoLimpio = contenido.trim();
+    const categoriaLimpia = CATEGORIAS_VALIDAS.includes(categoria) ? categoria : 'general';
+
 
     // Actualizar la nota
     const result = await query(
-      'UPDATE notas SET titulo = $1, contenido = $2 WHERE id = $3 RETURNING id, titulo, contenido',
-      [tituloLimpio, contenidoLimpio, id]
-    );
+  'UPDATE notas SET titulo = $1, contenido = $2, categoria = $3 WHERE id = $4 RETURNING id, titulo, contenido, categoria',
+  [tituloLimpio, contenidoLimpio, categoriaLimpia, id]
+);
 
     return new Response(JSON.stringify({ success: true, nota: result.rows[0] }), { status: 200 });
 
